@@ -31,10 +31,18 @@ for c_label in cvs_labels:
     if len(c_label)>1: # leave out empty labels
         df[c_label] = df['nlp.pretty_name'].map(lambda finding: 1.0 if c_label in finding else 0)
 df = df.drop(columns=['nlp.cui', 'nlp.pretty_name','nlp.source_value','meta.document_TouchedWhen'])
+df['patient_TrustNumber'] = df['meta.patient_TrustNumber']
 df = df.groupby('meta.patient_TrustNumber').agg(lambda x: np.max(x))
-
 print(df.head())
-print(df.tail())
-print(len(df))
 
-df.to_csv('CVS_data.csv')
+df.set_index('patient_TrustNumber')
+
+main_df = main_df.drop(columns=['ID','Patient_name','Accession.number','First_Name','Surname','patient_ReligionCode','duplicated','M','CVM','Num_Names','patient_Id','patient_MaritalStatusCode','patient_ReligionCode'])
+main_df = main_df.set_index('patient_TrustNumber')
+
+merge_df = main_df.join(df).fillna(0)
+
+print(merge_df.head())
+print(len(merge_df))
+
+merge_df.to_csv('final.csv')
