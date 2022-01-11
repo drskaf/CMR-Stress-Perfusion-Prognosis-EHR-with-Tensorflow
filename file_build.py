@@ -41,6 +41,8 @@ main_df = main_df.drop(columns=['ID','Patient_name','Accession.number','First_Na
 main_df = main_df.set_index('patient_TrustNumber')
 
 merge_df = main_df.join(df).fillna(0)
+merge_df['Essential hypertension'] = merge_df[['Essential hypertension (disorder)','Hypertensive disorder, systemic arterial (disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+
 
 print(merge_df.head())
 print(len(merge_df))
