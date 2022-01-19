@@ -42,3 +42,11 @@ print(merge_df.head())
 print(len(merge_df))
 
 merge_df.to_csv('final.csv')
+
+survival = pd.read_csv('Survival.csv')
+survival = survival.drop(columns=['ID','Patient_name','Accession.number','First_Name','Surname','patient_ReligionCode','duplicated','M','CVM','Num_Names','patient_Id','patient_MaritalStatusCode','patient_ReligionCode'])
+survival = survival.set_index('patient_TrustNumber')
+survival_df = survival.join(df).fillna(0)
+print(survival_df.head())
+print(len(survival_df))
+survival_df.to_csv('survival_final.csv')
