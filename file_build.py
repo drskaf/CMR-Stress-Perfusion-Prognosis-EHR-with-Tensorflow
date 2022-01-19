@@ -61,6 +61,7 @@ survival_df['Positive_perf'] = survival_df[['LAD_perf','LCx_perf','RCA_perf']].a
 survival_df['LAD_LGE'] = survival_df[['LGE_basal anterior','LGE_basal anteroseptum','LGE_mid anterior','LGE_mid anteroseptum','LGE_apical anterior','LGE_apical septum']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
 survival_df['LCx_LGE'] = survival_df[['LGE_basal inferolateral','LGE_basal anterolateral','LGE_mid inferolateral','LGE_mid anterolateral','LGE_apical lateral']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
 survival_df['RCA_LGE'] = survival_df[['LGE_basal inferoseptum','LGE_basal inferior','LGE_mid inferoseptum','LGE_mid inferior','LGE_apical inferior']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+survival_df['Positive_LGE'] = survival_df[['LAD_LGE','LCx_LGE','RCA_LGE']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
 
 survival_df['Essential hypertension'] = survival_df[['Essential hypertension (disorder)','Hypertensive disorder, systemic arterial (disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
 survival_df['Dyslipidaemia'] = survival_df[['Dyslipidemia (disorder)','Hypercholesterolemia (disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
