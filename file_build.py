@@ -47,6 +47,20 @@ survival = pd.read_csv('Survival.csv')
 survival = survival.drop(columns=['ID','Patient_name','Accession.number','First_Name','Surname','patient_ReligionCode','duplicated','M','CVM','Num_Names','patient_Id','patient_MaritalStatusCode','patient_ReligionCode'])
 survival = survival.set_index('patient_TrustNumber')
 survival_df = survival.join(df).fillna(0)
-print(survival_df.head())
 print(len(survival_df))
+print(survival_df.head())
 survival_df.to_csv('survival_final.csv')
+
+survival_m = pd.read_csv('Survival_mini.csv')
+survival_m = survival_m.drop(columns=['ID','Patient_name','Accession.number','First_Name','Surname','patient_ReligionCode','duplicated','M','CVM','Num_Names','patient_Id','patient_MaritalStatusCode','patient_ReligionCode'])
+survival_m = survival_m.set_index('patient_TrustNumber')
+survivalm_df = survival_m.join(df).fillna(0)
+print(len(survivalm_df))
+
+survivalm_df['t1'] = pd.to_datetime(survivalm_df['patient_DeceasedDtm'])
+survivalm_df['t2'] = pd.to_datetime(survivalm_df['Date_of_CMR'])
+
+survivalm_df['Duration'] = survivalm_df['t1'] - survivalm_df['t2']
+print(survivalm_df.head())
+survivalm_df.to_csv('survivalm_final.csv')
+
