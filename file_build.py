@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 import numpy as np
 import pandas as pd
-import os
 from itertools import chain
 
 main_df = pd.read_csv('Final list.csv')
