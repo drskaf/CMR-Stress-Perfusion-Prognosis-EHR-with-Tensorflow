@@ -48,11 +48,20 @@ survival = survival.drop(columns=['ID','Patient_name','Accession.number','First_
 survival = survival.set_index('patient_TrustNumber')
 survival_df = survival.join(df).fillna(0)
 print(len(survival_df))
-print(survival_df.head())
 
 survival_df['t1'] = pd.to_datetime(survival_df['patient_DeceasedDtm'])
 survival_df['t2'] = pd.to_datetime(survival_df['Date_of_CMR'])
-
 survival_df['Duration'] = survival_df['t1'] - survival_df['t2']
+
+survival_df['LAD_perf'] = survival_df[['p_basal anterior','p_basal anteroseptum','p_mid anterior','p_mid anteroseptum','p_apical anterior','p_apical septum']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+survival_df['LCx_perf'] = survival_df[['p_basal inferolateral','p_basal anterolateral','p_mid inferolateral','p_mid anterolateral','p_apical lateral']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+survival_df['RCA_perf'] = survival_df[['p_basal inferoseptum','p_basal inferior','p_mid inferoseptum','p_mid inferior','p_apical inferior']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+survival_df['MVO_perf'] = survival_df[['LAD_perf','LCx_perf','RCA_perf']].apply(lambda x: '{}'.format(np.min(x)), axis=1)
+
+survival_df['LAD_LGE'] = survival_df[['LGE_basal anterior','LGE_basal anteroseptum','LGE_mid anterior','LGE_mid anteroseptum','LGE_apical anterior','LGE_apical septum']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+survival_df['LCx_LGE'] = survival_df[['LGE_basal inferolateral','LGE_basal anterolateral','LGE_mid inferolateral','LGE_mid anterolateral','LGE_apical lateral']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+survival_df['RCA_LGE'] = survival_df[['LGE_basal inferoseptum','LGE_basal inferior','LGE_mid inferoseptum','LGE_mid inferior','LGE_apical inferior']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+
+print(survival_df.head())
 survival_df.to_csv('survival_final.csv')
 
