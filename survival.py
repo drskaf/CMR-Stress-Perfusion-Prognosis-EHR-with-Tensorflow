@@ -52,6 +52,14 @@ rca_km.fit(durations=survival_df[rca]['duration'],
                event_observed=survival_df[rca]['Event'], label="RCA ischaemia")
 rca_km.plot_survival_function(ax=ax)
 plt.show()
+patient_results = logrank_test(durations_A = survival_df[lad]['duration'],
+                               durations_B = survival_df[lcx]['duration'],
+                               duration_C = survival_df[rca]['duration'],
+                               event_observed_A = survival_df[lad]['Event'],
+                               event_observed_B = survival_df[lcx]['Event'],
+                               event_observed_C = survival_df[rca]['Event'])
+# Print out the p-value of log-rank test results
+print(patient_results.p_value)
 
 mvd = (survival_df['MVD']==1)
 no_mvd = (survival_df['MVD']==0)
