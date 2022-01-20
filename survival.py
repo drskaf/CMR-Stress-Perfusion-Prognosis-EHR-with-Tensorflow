@@ -96,3 +96,58 @@ patient_results = logrank_test(durations_A = survival_df[pos]['duration'],
                                event_observed_B = survival_df[neg]['Event'])
 # Print out the p-value of log-rank test results
 print(patient_results.p_value)
+
+lad_lge = (survival_df['LAD_LGE']==1)
+lcx_lge = (survival_df['LCx_LGE']==1)
+rca_lge = (survival_df['RCA_LGE']==1)
+ax = plt.subplot(111)
+ladlge_km = KaplanMeierFitter()
+lcxlge_km = KaplanMeierFitter()
+rcalge_km = KaplanMeierFitter()
+ladlge_km.fit(durations=survival_df[lad_lge]['duration'],
+               event_observed=survival_df[lad_lge]['Event'], label="LAD LGE")
+ladlge_km.plot_survival_function(ax=ax)
+lcxlge_km.fit(durations=survival_df[lcx_lge]['duration'],
+               event_observed=survival_df[lcx_lge]['Event'], label="LCx LGE")
+lcxlge_km.plot_survival_function(ax=ax)
+rcalge_km.fit(durations=survival_df[rca_lge]['duration'],
+               event_observed=survival_df[rca_lge]['Event'], label="RCA LGE")
+rcalge_km.plot_survival_function(ax=ax)
+plt.show()
+patient_results = logrank_test(durations_A = survival_df[lad_lge]['duration'],
+                               durations_B = survival_df[lcx_lge]['duration'],
+                               duration_C = survival_df[rca_lge]['duration'],
+                               event_observed_A = survival_df[lad_lge]['Event'],
+                               event_observed_B = survival_df[lcx_lge]['Event'],
+                               event_observed_C = survival_df[rca_lge]['Event'])
+# Print out the p-value of log-rank test results
+print(patient_results.p_value)
+
+poslge = (survival_df['Positive_LGE']==1)
+neglge = (survival_df['Positive_LGE']==0)
+ax = plt.subplot(111)
+pos_lge = KaplanMeierFitter()
+neg_lge = KaplanMeierFitter()
+pos_lge.fit(durations=survival_df[poslge]['duration'],
+               event_observed=survival_df[poslge]['Event'], label="Positive LGE")
+pos_lge.plot_survival_function(ax=ax)
+neg_lge.fit(durations=survival_df[neglge]['duration'],
+               event_observed=survival_df[neglge]['Event'], label="Negative LGE")
+neg_lge.plot_survival_function(ax=ax)
+plt.show()
+patient_results = logrank_test(durations_A = survival_df[poslge]['duration'],
+                               durations_B = survival_df[neglge]['duration'],
+                               event_observed_A = survival_df[poslge]['Event'],
+                               event_observed_B = survival_df[neglge]['Event'])
+# Print out the p-value of log-rank test results
+print(patient_results.p_value)
+
+survival_df['Diabetes_mellitus'] = survival_df['Diabetes_mellitus_(disorder)']
+survival_df['Cerebrovascular_accident'] = survival_df['Cerebrovascular_accident_(disorder)']
+survival_df['Chronic_kidney_disease'] = survival_df['Chronic_kidney_disease_(disorder)']
+survival_df['Heart_failure'] = survival_df['Heart_failure_(disorder)']
+print(survival_df.head())
+
+aft = WeibullAFTFitter()
+aft.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Age_on_20.08.2021 + patient_GenderCode + Essential_hypertension + Dyslipidaemia + Positive_LGE + Positive_perf + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease')
+print(aft.summary)
