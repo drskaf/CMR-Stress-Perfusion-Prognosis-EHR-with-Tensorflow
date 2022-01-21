@@ -9,6 +9,7 @@ from lifelines import WeibullAFTFitter
 from lifelines.plotting import qq_plot
 from lifelines import CoxPHFitter
 
+# Load data
 survival_df = pd.read_csv('survival_final.csv')
 survival_df['duration'] = [(x.split(' ')[0]) for x in survival_df['Duration']]
 survival_df['duration'] = pd.to_numeric(survival_df["duration"], downcast="float")
@@ -23,7 +24,7 @@ kmf_has_lcx = LogNormalFitter()
 kmf_has_rca = LogNormalFitter()
 kmf_has_mvd = LogNormalFitter()
 
-# Fit Kaplan Meier estimators to each DataFrame
+# Fit Log Normal Fitter estimators to each DataFrame
 kmf_has_lad.fit(durations=survival_df[survival_df['LAD_perf']==1]['duration'],
                event_observed=survival_df[survival_df['LAD_perf']==1]['Event'])
 kmf_has_lcx.fit(durations=survival_df[survival_df['LCx_perf']==1]['duration'],
@@ -39,6 +40,7 @@ print("The median survival duration (days) of patients with LCx ischaemia: ", km
 print("The median survival duration (days) of patients with RCA ischaemia: ", kmf_has_rca.median_survival_time_)
 print("The median survival duration (days) of patients with MVD ischaemia: ", kmf_has_mvd.median_survival_time_)
 
+# Compare survival in different groups
 lad = (survival_df['LAD_perf']==1)
 lcx = (survival_df['LCx_perf']==1)
 rca = (survival_df['RCA_perf']==1)
@@ -56,6 +58,7 @@ rca_km.fit(durations=survival_df[rca]['duration'],
                event_observed=survival_df[rca]['Event'], label="RCA ischaemia")
 rca_km.plot_survival_function(ax=ax)
 plt.show()
+# Calculate Log Rank
 patient_results = logrank_test(durations_A = survival_df[lad]['duration'],
                                durations_B = survival_df[lcx]['duration'],
                                duration_C = survival_df[rca]['duration'],
@@ -148,6 +151,7 @@ patient_results = logrank_test(durations_A = survival_df[poslge]['duration'],
 # Print out the p-value of log-rank test results
 print(patient_results.p_value)
 
+# Compare covariates survival
 survival_df['Diabetes_mellitus'] = survival_df['Diabetes_mellitus_(disorder)']
 survival_df['Cerebrovascular_accident'] = survival_df['Cerebrovascular_accident_(disorder)']
 survival_df['Chronic_kidney_disease'] = survival_df['Chronic_kidney_disease_(disorder)']
@@ -160,6 +164,7 @@ print(aft.summary)
 aft.plot()
 plt.show
 
+# Calculate Cox Proportional Hazard Ratio
 cox = CoxPHFitter()
 cox.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Age_on_20.08.2021 + patient_GenderCode + Essential_hypertension + Dyslipidaemia + Positive_LGE + Positive_perf + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease')
 print(cox.summary)
