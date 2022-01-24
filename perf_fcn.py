@@ -17,14 +17,6 @@ pd.set_option('display.max_columns', 500)
 survival_df = pd.read_csv('survival_final.csv')
 survival_df['duration'] = [(x.split(' ')[0]) for x in survival_df['Duration']]
 survival_df['duration'] = pd.to_numeric(survival_df["duration"], downcast="float")
-survival_df['Diabetes_mellitus'] = survival_df['Diabetes_mellitus_(disorder)'].astype(str)
-survival_df['Cerebrovascular_accident'] = survival_df['Cerebrovascular_accident_(disorder)'].astype(str)
-survival_df['Chronic_kidney_disease'] = survival_df['Chronic_kidney_disease_(disorder)'].astype(str)
-survival_df['Heart_failure'] = survival_df['Heart_failure_(disorder)'].astype(str)
-survival_df['Dyslipidaemia'] = survival_df['Dyslipidaemia'].astype(str)
-survival_df['Essential_hypertension'] = survival_df['Essential_hypertension'].astype(str)
-survival_df['Positive_LGE'] = survival_df['Positive_LGE'].astype(str)
-survival_df['Positive_perf'] = survival_df['Positive_perf'].astype(str)
 
 # Define columns
 categorical_col_list = ['Positive_perf']
