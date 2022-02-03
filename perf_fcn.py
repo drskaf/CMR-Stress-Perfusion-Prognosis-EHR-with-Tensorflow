@@ -15,8 +15,6 @@ pd.set_option('display.max_columns', 500)
 
 # Load dataset
 survival_df = pd.read_csv('survival_final.csv')
-survival_df['duration'] = [(x.split(' ')[0]) for x in survival_df['Duration']]
-survival_df['duration'] = pd.to_numeric(survival_df["duration"], downcast="float")
 
 # Define columns
 categorical_col_list = ['Positive_perf']
