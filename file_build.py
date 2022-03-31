@@ -95,4 +95,4 @@ mini_survival['LCx_LGE'] = mini_survival[
 mini_survival['RCA_LGE'] = mini_survival[
     ['LGE_basal inferoseptum', 'LGE_basal inferior', 'LGE_mid inferoseptum', 'LGE_mid inferior',
      'LGE_apical inferior']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-mini_survival.to_csv('survivalm.csv')
+mini_survival.to_csv('survivalm.csv')  
