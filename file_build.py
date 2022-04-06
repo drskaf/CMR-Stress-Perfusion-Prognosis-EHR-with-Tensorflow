@@ -38,7 +38,7 @@ merge_df = main_df.join(df).fillna(0)
 merge_df['Essential hypertension'] = merge_df[['Essential hypertension (disorder)','Hypertensive disorder, systemic arterial (disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
 
 
-print(merge_df.head())
+print(merge_df.head())  
 print(len(merge_df))
 
 merge_df.to_csv('final.csv')
