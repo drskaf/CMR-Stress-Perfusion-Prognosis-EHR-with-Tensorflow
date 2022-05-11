@@ -86,7 +86,7 @@ mini_survival['RCA_perf'] = mini_survival[
     lambda x: '{}'.format(np.max(x)), axis=1)
 
 
-mini_survival['LAD_LGE'] = mini_survival[
+mini_survival['LAD_LGE'] = mini_survival[  
     ['LGE_basal anterior', 'LGE_basal anteroseptum', 'LGE_mid anterior', 'LGE_mid anteroseptum', 'LGE_apical anterior',
      'LGE_apical septum']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
 mini_survival['LCx_LGE'] = mini_survival[
