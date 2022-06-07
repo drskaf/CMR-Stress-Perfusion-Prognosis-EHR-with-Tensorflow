@@ -37,62 +37,43 @@ main_df = main_df.set_index('patient_TrustNumber')
 merge_df = main_df.join(df).fillna(0)
 merge_df['Essential hypertension'] = merge_df[['Essential hypertension (disorder)','Hypertensive disorder, systemic arterial (disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
 
+merge_df['Dyslipidaemia'] = merge_df[['Dyslipidemia (disorder)','Hypercholesterolemia (disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+merge_df['t1'] = pd.to_datetime(merge_df['patient_DeceasedDtm'])
+merge_df['t2'] = pd.to_datetime(merge_df['Date_of_CMR'], dayfirst=True)
+merge_df['Duration'] = merge_df['t1'] - merge_df['t2']
 
-print(merge_df.head())  
+print(merge_df.head())
 print(len(merge_df))
 
 merge_df.to_csv('final.csv')
 
-survival = pd.read_csv('Survival.csv')
-survival = survival.drop(columns=['ID','Patient_name','Accession.number','First_Name','Surname','patient_ReligionCode','duplicated','M','CVM','Num_Names','patient_Id','patient_MaritalStatusCode','patient_ReligionCode'])
-survival = survival.set_index('patient_TrustNumber')
-survival_df = survival.join(df).fillna(0)
-print(len(survival_df))
-
-survival_df['t1'] = pd.to_datetime(survival_df['patient_DeceasedDtm'])
-survival_df['t2'] = pd.to_datetime(survival_df['Date_of_CMR'])
-survival_df['Duration'] = survival_df['t1'] - survival_df['t2']
-
-survival_df['LAD_perf'] = survival_df[['p_basal anterior','p_basal anteroseptum','p_mid anterior','p_mid anteroseptum','p_apical anterior','p_apical septum']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-survival_df['LCx_perf'] = survival_df[['p_basal inferolateral','p_basal anterolateral','p_mid inferolateral','p_mid anterolateral','p_apical lateral']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-survival_df['RCA_perf'] = survival_df[['p_basal inferoseptum','p_basal inferior','p_mid inferoseptum','p_mid inferior','p_apical inferior']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-survival_df['Positive_perf'] = survival_df[['LAD_perf','LCx_perf','RCA_perf']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-
-survival_df['LAD_LGE'] = survival_df[['LGE_basal anterior','LGE_basal anteroseptum','LGE_mid anterior','LGE_mid anteroseptum','LGE_apical anterior','LGE_apical septum']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-survival_df['LCx_LGE'] = survival_df[['LGE_basal inferolateral','LGE_basal anterolateral','LGE_mid inferolateral','LGE_mid anterolateral','LGE_apical lateral']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-survival_df['RCA_LGE'] = survival_df[['LGE_basal inferoseptum','LGE_basal inferior','LGE_mid inferoseptum','LGE_mid inferior','LGE_apical inferior']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-survival_df['Positive_LGE'] = survival_df[['LAD_LGE','LCx_LGE','RCA_LGE']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-
-survival_df['Essential hypertension'] = survival_df[['Essential hypertension (disorder)','Hypertensive disorder, systemic arterial (disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-survival_df['Dyslipidaemia'] = survival_df[['Dyslipidemia (disorder)','Hypercholesterolemia (disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-
-print(survival_df.head())
-survival_df.to_csv('survival_final.csv')
-
-mini_survival = pd.read_csv('Survival_mini.csv')
-mini_survival = mini_survival.drop(columns=['ID','Patient_name','Accession.number','First_Name','Surname','patient_ReligionCode','duplicated','M','CVM','Num_Names','patient_Id','patient_MaritalStatusCode','patient_ReligionCode'])
-mini_survival = mini_survival.set_index('patient_TrustNumber')
-mini_survival = mini_survival.join(df).fillna(0)
-mini_survival['Essential hypertension'] = mini_survival[['Essential hypertension (disorder)','Hypertensive disorder, systemic arterial (disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-mini_survival['Dyslipidaemia'] = mini_survival[['Dyslipidemia (disorder)','Hypercholesterolemia (disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-mini_survival['LAD_perf'] = mini_survival[
+merge_df['LAD_perf'] = merge_df[
     ['p_basal anterior', 'p_basal anteroseptum', 'p_mid anterior', 'p_mid anteroseptum', 'p_apical anterior',
      'p_apical septum']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-mini_survival['LCx_perf'] = mini_survival[
+merge_df['LCx_perf'] = merge_df[
     ['p_basal inferolateral', 'p_basal anterolateral', 'p_mid inferolateral', 'p_mid anterolateral',
      'p_apical lateral']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-mini_survival['RCA_perf'] = mini_survival[
+merge_df['RCA_perf'] = merge_df[
     ['p_basal inferoseptum', 'p_basal inferior', 'p_mid inferoseptum', 'p_mid inferior', 'p_apical inferior']].apply(
     lambda x: '{}'.format(np.max(x)), axis=1)
+merge_df['Positive_perf'] = merge_df[['LAD_perf', 'LCx_perf', 'RCA_perf']].apply(lambda x: '{}'.format(np.max(x)),
+                                                                                 axis=1)
 
-
-mini_survival['LAD_LGE'] = mini_survival[  
+merge_df['LAD_LGE'] = merge_df[
     ['LGE_basal anterior', 'LGE_basal anteroseptum', 'LGE_mid anterior', 'LGE_mid anteroseptum', 'LGE_apical anterior',
      'LGE_apical septum']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-mini_survival['LCx_LGE'] = mini_survival[
+merge_df['LCx_LGE'] = merge_df[
     ['LGE_basal inferolateral', 'LGE_basal anterolateral', 'LGE_mid inferolateral', 'LGE_mid anterolateral',
      'LGE_apical lateral']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-mini_survival['RCA_LGE'] = mini_survival[
+merge_df['RCA_LGE'] = merge_df[
     ['LGE_basal inferoseptum', 'LGE_basal inferior', 'LGE_mid inferoseptum', 'LGE_mid inferior',
      'LGE_apical inferior']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-mini_survival.to_csv('survivalm.csv')     
+merge_df['Positive_LGE'] = merge_df[['LAD_LGE', 'LCx_LGE', 'RCA_LGE']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+
+merge_df.columns = merge_df.columns.str.replace(' ','_')
+
+print(merge_df.head())
+print(len(merge_df))
+
+merge_df.to_csv('final.csv')
+    
