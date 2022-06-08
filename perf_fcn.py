@@ -8,7 +8,7 @@ import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 import pandas as pd
 import aequitas as ae
-from utils import build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
+from utils import patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
 from plot_metric.functions import BinaryClassification
 
 pd.set_option('display.max_columns', 500)
@@ -41,7 +41,6 @@ categorical_col_list = ['p_basal_anterior', 'p_basal_anteroseptum', 'p_mid_anter
 PREDICTOR_FIELD = 'Event'
 
 # Split data
-from student_utils import patient_dataset_splitter
 d_train, d_val, d_test = patient_dataset_splitter(survival_df, 'patient_TrustNumber')
 assert len(d_train) + len(d_val) + len(d_test) == len(survival_df)
 print("Test passed for number of total rows equal!")
