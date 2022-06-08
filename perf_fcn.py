@@ -14,10 +14,31 @@ from plot_metric.functions import BinaryClassification
 pd.set_option('display.max_columns', 500)
 
 # Load dataset
-survival_df = pd.read_csv('survival_final.csv')
+survival_df = pd.read_csv('final.csv')
+survival_df['duration'] = [(x.split(' ')[0]) for x in survival_df['Duration']]
+survival_df['duration'] = pd.to_numeric(survival_df["duration"], downcast="float")
+survival_df['p_basal_anterior'] = survival_df['p_basal_anterior'].astype(str)
+survival_df['p_basal_anteroseptum'] = survival_df['p_basal_anteroseptum'].astype(str)
+survival_df['p_mid_anterior'] = survival_df['p_mid_anterior'].astype(str)
+survival_df['p_mid_anteroseptum'] = survival_df['p_mid_anteroseptum'].astype(str)
+survival_df['p_apical_anterior'] = survival_df['p_apical_anterior'].astype(str)
+survival_df['p_apical_septum'] = survival_df['p_apical_septum'].astype(str)
+survival_df['p_basal_inferolateral'] = survival_df['p_basal_inferolateral'].astype(str)
+survival_df['p_basal_anterolateral'] = survival_df['p_basal_anterolateral'].astype(str)
+survival_df['p_mid_inferolateral'] = survival_df['p_mid_inferolateral'].astype(str)
+survival_df['p_mid_anterolateral'] = survival_df['p_mid_anterolateral'].astype(str)
+survival_df['p_apical_lateral'] = survival_df['p_apical_lateral'].astype(str)
+survival_df['p_basal_inferoseptum'] = survival_df['p_basal_inferoseptum'].astype(str)
+survival_df['p_basal_inferior'] = survival_df['p_basal_inferior'].astype(str)
+survival_df['p_mid_inferoseptum'] = survival_df['p_mid_inferoseptum'].astype(str)
+survival_df['p_mid_inferior'] = survival_df['p_mid_inferior'].astype(str)
+survival_df['p_apical_inferior'] = survival_df['p_apical_inferior'].astype(str)
 
 # Define columns
-categorical_col_list = ['Positive_perf']
+categorical_col_list = ['p_basal_anterior', 'p_basal_anteroseptum', 'p_mid_anterior', 'p_mid_anteroseptum', 'p_apical_anterior',
+     'p_apical_septum','p_basal_inferolateral', 'p_basal_anterolateral', 'p_mid_inferolateral', 'p_mid_anterolateral',
+     'p_apical_lateral','p_basal_inferoseptum', 'p_basal_inferior', 'p_mid_inferoseptum', 'p_mid_inferior', 'p_apical_inferior']
+numerical_col_list = ['Age_on_20.08.2021']
 PREDICTOR_FIELD = 'Event'
 
 # Split data
@@ -27,7 +48,7 @@ assert len(d_train) + len(d_val) + len(d_test) == len(survival_df)
 print("Test passed for number of total rows equal!")
 
 # Convert dataset from Pandas dataframes to TF dataset
-batch_size = 64
+batch_size = 10
 survival_train_ds = df_to_dataset(d_train, PREDICTOR_FIELD, batch_size=batch_size)
 survival_val_ds = df_to_dataset(d_val, PREDICTOR_FIELD, batch_size=batch_size)
 survival_test_ds = df_to_dataset(d_test, PREDICTOR_FIELD, batch_size=batch_size)
@@ -48,6 +69,27 @@ test_cat_var1 = tf_cat_col_list[0]
 print("Example categorical field:\n{}".format(test_cat_var1))
 demo(test_cat_var1, survival_batch)
 
+# Create numerical features
+from student_utils import create_tf_numeric_feature
+def calculate_stats_from_train_data(df, col):
+    mean = df[col].describe()['mean']
+    std = df[col].describe()['std']
+    return mean, std
+
+def create_tf_numerical_feature_cols(numerical_col_list, train_df):
+    tf_numeric_col_list = []
+    for c in numerical_col_list:
+        mean, std = calculate_stats_from_train_data(train_df, c)
+        tf_numeric_feature = create_tf_numeric_feature(c, mean, std)
+        tf_numeric_col_list.append(tf_numeric_feature)
+    return tf_numeric_col_list
+tf_cont_col_list = create_tf_numerical_feature_cols(numerical_col_list, d_train)
+
+# Test a batch
+test_cont_var1 = tf_cont_col_list[0]
+print("Example continuous field:\n{}\n".format(test_cont_var1))
+demo(test_cont_var1, survival_batch)
+
 import random
 random.seed(123)
 import numpy as np
@@ -59,37 +101,43 @@ tf.random.set_seed(1234)
 claim_feature_columns = tf_cat_col_list
 claim_feature_layer = tf.keras.layers.DenseFeatures(claim_feature_columns)
 
-optimizer = tf.keras.optimizers.RMSprop(0.0001)
+optimizer = tf.keras.optimizers.RMSprop(0.000001)
 def build_sequential_model(feature_layer):
     model = tf.keras.Sequential([
         feature_layer,
         tf.keras.layers.Dense(175, activation='relu'),
         tf.keras.layers.Dense(75, activation='relu'),
-        tfp.layers.DenseVariational(1+1, posterior_mean_field, prior_trainable),
-        tfp.layers.DistributionLambda(
-            lambda t:tfp.distributions.Normal(loc=t[..., :1],
-                                             scale=1e-3 + tf.math.softplus(0.01 * t[...,1:])
-                                             )
-        ),
+        tf.keras.layers.Dense(50, activation='relu'),
+        tf.keras.layers.Dense(2)
     ])
     return model
 
+checkpoint_path = "training/ann.ckpt"
+checkpoint_dir = os.path.dirname(checkpoint_path)
+
+# Create a callback that saves the model's weights
+cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
+                                                 save_weights_only=True,
+                                                 verbose=1)
+
 def build_survival_model(train_ds, val_ds,  feature_layer,  epochs=5, loss_metric='mse'):
     model = build_sequential_model(feature_layer)
-    model.compile(optimizer=optimizer, loss=loss_metric, metrics=[loss_metric])
-    early_stop = tf.keras.callbacks.EarlyStopping(monitor=loss_metric, patience=50)
+    model.compile(optimizer=optimizer, loss=loss_metric, metrics=['accuracy'])
+    early_stop = tf.keras.callbacks.EarlyStopping(monitor=loss_metric, patience=5)
     history = model.fit(train_ds, validation_data=val_ds,
-                        callbacks=[early_stop],
+                        callbacks=[cp_callback],
                         epochs=epochs)
     return model, history
 
-survival_model, history = build_survival_model(survival_train_ds, survival_val_ds,  claim_feature_layer,  epochs=400)
+survival_model, history = build_survival_model(survival_train_ds, survival_val_ds,  claim_feature_layer,  epochs=80)
 
 # summarize history for loss
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
 plt.plot(history.history['loss'])
 plt.plot(history.history['val_loss'])
-plt.title('model loss')
-plt.ylabel('loss')
+plt.title('model training')
+plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
@@ -100,15 +148,11 @@ survival_x_tst = dict(d_test[feature_list])
 survival_yhat = survival_model(survival_x_tst)
 preds = survival_model.predict(survival_test_ds)
 
-from student_utils import get_mean_std_from_preds
-m, s = get_mean_std_from_preds(survival_yhat)
-
 prob_outputs = {
     "pred": preds.flatten(),
-    "actual_value": d_test['Event'].values,
-    "pred_mean": m.numpy().flatten(),
-    "pred_std": s.numpy().flatten()
+    "actual_value": d_test['Event'].values
 }
+
 prob_output_df = pd.DataFrame(prob_outputs)
 print(prob_output_df.head())
 
@@ -123,7 +167,7 @@ def add_pred_to_test(test_df, pred_np, demo_col_list):
     test_df['label_value'] = test_df['Event']
     return test_df
 
-pred_test_df = add_pred_to_test(d_test, binary_df, ['Positive_perf'])
+pred_test_df = add_pred_to_test(d_test, prob_output_df, ['Positive_perf'])
 print(pred_test_df.head())
 
 from sklearn.metrics import accuracy_score, f1_score, classification_report, roc_auc_score
@@ -131,25 +175,6 @@ y_true = pred_test_df['label_value'].values
 y_pred = pred_test_df['score'].values
 print(classification_report(y_true, y_pred))
 print(roc_auc_score(y_true, y_pred))
-
-# Assess model bias
-from aequitas.preprocessing import preprocess_input_df
-from aequitas.group import Group
-from aequitas.plotting import Plot
-from aequitas.bias import Bias
-from aequitas.fairness import Fairness
-
-ae_subset_df = pred_test_df [['Positive_perf','score', 'label_value']]
-ae_df, _ = preprocess_input_df(ae_subset_df)
-g = Group()
-xtab, _ = g.get_crosstabs(ae_df)
-absolute_metrics = g.list_absolute_metrics(xtab)
-clean_xtab = xtab.fillna(-1)
-aqp = Plot()
-b = Bias()
-
-p = aqp.plot_group_metric_all(xtab, metrics=['tpr', 'ppr', 'fdr', 'fpr'], ncols=2)
-
 
 # Visualisation with plot_metric
 bc = BinaryClassification(y_true, y_pred, labels=["Class 1", "Class 2"])
