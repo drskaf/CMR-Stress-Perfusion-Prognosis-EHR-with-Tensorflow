@@ -38,7 +38,6 @@ survival_df['p_apical_inferior'] = survival_df['p_apical_inferior'].astype(str)
 categorical_col_list = ['p_basal_anterior', 'p_basal_anteroseptum', 'p_mid_anterior', 'p_mid_anteroseptum', 'p_apical_anterior',
      'p_apical_septum','p_basal_inferolateral', 'p_basal_anterolateral', 'p_mid_inferolateral', 'p_mid_anterolateral',
      'p_apical_lateral','p_basal_inferoseptum', 'p_basal_inferior', 'p_mid_inferoseptum', 'p_mid_inferior', 'p_apical_inferior']
-numerical_col_list = ['Age_on_20.08.2021']
 PREDICTOR_FIELD = 'Event'
 
 # Split data
@@ -68,27 +67,6 @@ tf_cat_col_list = create_tf_categorical_feature_cols(categorical_col_list)
 test_cat_var1 = tf_cat_col_list[0]
 print("Example categorical field:\n{}".format(test_cat_var1))
 demo(test_cat_var1, survival_batch)
-
-# Create numerical features
-from student_utils import create_tf_numeric_feature
-def calculate_stats_from_train_data(df, col):
-    mean = df[col].describe()['mean']
-    std = df[col].describe()['std']
-    return mean, std
-
-def create_tf_numerical_feature_cols(numerical_col_list, train_df):
-    tf_numeric_col_list = []
-    for c in numerical_col_list:
-        mean, std = calculate_stats_from_train_data(train_df, c)
-        tf_numeric_feature = create_tf_numeric_feature(c, mean, std)
-        tf_numeric_col_list.append(tf_numeric_feature)
-    return tf_numeric_col_list
-tf_cont_col_list = create_tf_numerical_feature_cols(numerical_col_list, d_train)
-
-# Test a batch
-test_cont_var1 = tf_cont_col_list[0]
-print("Example continuous field:\n{}\n".format(test_cont_var1))
-demo(test_cont_var1, survival_batch)
 
 import random
 random.seed(123)
