@@ -5,7 +5,7 @@ from tensorflow import keras
 import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 import pandas as pd
-from utils import patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
+from utils import create_tf_categorical_feature_cols, patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
 from plot_metric.functions import BinaryClassification
 from keras.models import model_from_json, load_model
 import pickle
@@ -42,7 +42,6 @@ survival_test_ds = df_to_dataset(test_data, PREDICTOR_FIELD, batch_size=batch_si
 
 # Create categorical features
 vocab_file_list = build_vocab_files(test_data, categorical_col_list)
-from student_utils import create_tf_categorical_feature_cols
 tf_cat_col_list = create_tf_categorical_feature_cols(categorical_col_list)
 
 # Create feature layer
