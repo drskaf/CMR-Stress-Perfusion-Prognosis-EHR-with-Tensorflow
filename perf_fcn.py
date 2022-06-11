@@ -15,8 +15,9 @@ pd.set_option('display.max_columns', 500)
 
 # Load dataset
 survival_df = pd.read_csv('final.csv')
-survival_df['duration'] = [(x.split(' ')[0]) for x in survival_df['Duration']]
-survival_df['duration'] = pd.to_numeric(survival_df["duration"], downcast="float")
+survival_df = survival_df[['p_basal_anterior', 'p_basal_anteroseptum', 'p_mid_anterior', 'p_mid_anteroseptum', 'p_apical_anterior',
+     'p_apical_septum','p_basal_inferolateral', 'p_basal_anterolateral', 'p_mid_inferolateral', 'p_mid_anterolateral',
+     'p_apical_lateral','p_basal_inferoseptum', 'p_basal_inferior', 'p_mid_inferoseptum', 'p_mid_inferior', 'p_apical_inferior', 'Event', 'patient_TrustNumber']]
 survival_df['p_basal_anterior'] = survival_df['p_basal_anterior'].astype(str)
 survival_df['p_basal_anteroseptum'] = survival_df['p_basal_anteroseptum'].astype(str)
 survival_df['p_mid_anterior'] = survival_df['p_mid_anterior'].astype(str)
@@ -44,6 +45,10 @@ PREDICTOR_FIELD = 'Event'
 d_train, d_val, d_test = patient_dataset_splitter(survival_df, 'patient_TrustNumber')
 assert len(d_train) + len(d_val) + len(d_test) == len(survival_df)
 print("Test passed for number of total rows equal!")
+d_train = d_train.drop(columns=['patient_TrustNumber'])
+d_val = d_val.drop(columns=['patient_TrustNumber'])
+d_test = d_test.drop(columns=['patient_TrustNumber'])
+d_test.to_csv('test_data.csv')
 
 # Convert dataset from Pandas dataframes to TF dataset
 batch_size = 10
@@ -88,12 +93,12 @@ def build_sequential_model(feature_layer):
     ])
     return model
 
-checkpoint_path = "training/ann.ckpt"
+checkpoint_path = "training/ann.h5"
 checkpoint_dir = os.path.dirname(checkpoint_path)
 
 # Create a callback that saves the model's weights
 cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
-                                                 save_weights_only=True,
+                                                 save_best_only=False,
                                                  verbose=1)
 
 def build_survival_model(train_ds, val_ds,  feature_layer,  epochs=5, loss_metric='mse'):
@@ -101,7 +106,7 @@ def build_survival_model(train_ds, val_ds,  feature_layer,  epochs=5, loss_metri
     model.compile(optimizer=optimizer, loss=loss_metric, metrics=['accuracy'])
     early_stop = tf.keras.callbacks.EarlyStopping(monitor=loss_metric, patience=5)
     history = model.fit(train_ds, validation_data=val_ds,
-                        callbacks=[cp_callback],
+                        callbacks=[cp_callback,early_stop],
                         epochs=epochs)
     return model, history
 
@@ -117,5 +122,7 @@ plt.ylabel('accuracy')
 plt.xlabel('epoch')
 plt.legend(['train', 'test'], loc='upper left')
 plt.show()
+
+pickle.dump(survival_model, open('model.pkl', 'wb'))
 
 
