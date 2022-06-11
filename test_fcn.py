@@ -4,7 +4,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 import pandas as pd
-from utils import patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
+from utils import get_student_binary_prediction, patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
 from plot_metric.functions import BinaryClassification
 
 # Predict with model
@@ -22,7 +22,6 @@ prob_output_df = pd.DataFrame(prob_outputs)
 print(prob_output_df.head())
 
 # Evaluate model
-from student_utils import get_student_binary_prediction
 binary_df = get_student_binary_prediction(prob_output_df, 'pred_mean')
 
 def add_pred_to_test(test_df, pred_np, demo_col_list):
