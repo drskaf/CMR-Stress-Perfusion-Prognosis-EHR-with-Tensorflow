@@ -89,7 +89,7 @@ def build_sequential_model(feature_layer):
         tf.keras.layers.Dense(175, activation='relu'),
         tf.keras.layers.Dense(75, activation='relu'),
         tf.keras.layers.Dense(50, activation='relu'),
-        tf.keras.layers.Dense(2)
+        tf.keras.layers.Dense(2, activation='softmax')
     ])
     return model
 
@@ -110,7 +110,7 @@ def build_survival_model(train_ds, val_ds,  feature_layer,  epochs=5, loss_metri
                         epochs=epochs)
     return model, history
 
-survival_model, history = build_survival_model(survival_train_ds, survival_val_ds,  claim_feature_layer,  epochs=80)
+survival_model, history = build_survival_model(survival_train_ds, survival_val_ds,  claim_feature_layer,  epochs=20)
 
 # summarize history for loss
 plt.plot(history.history['accuracy'])
