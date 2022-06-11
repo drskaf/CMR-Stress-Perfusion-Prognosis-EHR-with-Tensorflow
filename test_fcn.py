@@ -1,49 +1,54 @@
 import os
 import numpy as np
 import tensorflow as tf
+from tensorflow import keras
 import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 import pandas as pd
-from utils import get_student_binary_prediction, patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
+from utils import patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
 from plot_metric.functions import BinaryClassification
+from keras.models import model_from_json, load_model
+import pickle
 
-# Predict with model
-feature_list = categorical_col_list
-survival_x_tst = dict(d_test[feature_list])
-survival_yhat = survival_model(survival_x_tst)
-preds = survival_model.predict(survival_test_ds)
+# Load test data
+test_data = pd.read_csv('test_data.csv')
 
-prob_outputs = {
-    "pred": preds.flatten(),
-    "actual_value": d_test['Event'].values
-}
+test_data['p_basal_anterior'] = test_data['p_basal_anterior'].astype(str)
+test_data['p_basal_anteroseptum'] = test_data['p_basal_anteroseptum'].astype(str)
+test_data['p_mid_anterior'] = test_data['p_mid_anterior'].astype(str)
+test_data['p_mid_anteroseptum'] = test_data['p_mid_anteroseptum'].astype(str)
+test_data['p_apical_anterior'] = test_data['p_apical_anterior'].astype(str)
+test_data['p_apical_septum'] = test_data['p_apical_septum'].astype(str)
+test_data['p_basal_inferolateral'] = test_data['p_basal_inferolateral'].astype(str)
+test_data['p_basal_anterolateral'] = test_data['p_basal_anterolateral'].astype(str)
+test_data['p_mid_inferolateral'] = test_data['p_mid_inferolateral'].astype(str)
+test_data['p_mid_anterolateral'] = test_data['p_mid_anterolateral'].astype(str)
+test_data['p_apical_lateral'] = test_data['p_apical_lateral'].astype(str)
+test_data['p_basal_inferoseptum'] = test_data['p_basal_inferoseptum'].astype(str)
+test_data['p_basal_inferior'] = test_data['p_basal_inferior'].astype(str)
+test_data['p_mid_inferoseptum'] = test_data['p_mid_inferoseptum'].astype(str)
+test_data['p_mid_inferior'] = test_data['p_mid_inferior'].astype(str)
+test_data['p_apical_inferior'] = test_data['p_apical_inferior'].astype(str)
 
-prob_output_df = pd.DataFrame(prob_outputs)
-print(prob_output_df.head())
+# Define columns
+categorical_col_list = ['p_basal_anterior', 'p_basal_anteroseptum', 'p_mid_anterior', 'p_mid_anteroseptum', 'p_apical_anterior',
+     'p_apical_septum','p_basal_inferolateral', 'p_basal_anterolateral', 'p_mid_inferolateral', 'p_mid_anterolateral',
+     'p_apical_lateral','p_basal_inferoseptum', 'p_basal_inferior', 'p_mid_inferoseptum', 'p_mid_inferior', 'p_apical_inferior']
+PREDICTOR_FIELD = 'Event'
 
-# Evaluate model
-binary_df = get_student_binary_prediction(prob_output_df, 'pred_mean')
+# Convert dataset from Pandas dataframes to TF dataset
+batch_size = 1
+survival_test_ds = df_to_dataset(test_data, PREDICTOR_FIELD, batch_size=batch_size)
 
-def add_pred_to_test(test_df, pred_np, demo_col_list):
-    for c in demo_col_list:
-        test_df[c] = test_df[c].astype(str)
-    test_df['score'] = pred_np
-    test_df['label_value'] = test_df['Event']
-    return test_df
+# Create categorical features
+vocab_file_list = build_vocab_files(test_data, categorical_col_list)
+from student_utils import create_tf_categorical_feature_cols
+tf_cat_col_list = create_tf_categorical_feature_cols(categorical_col_list)
 
-pred_test_df = add_pred_to_test(d_test, prob_output_df, ['Positive_perf'])
-print(pred_test_df.head())
+# Create feature layer
+claim_feature_columns = tf_cat_col_list
+claim_feature_layer = tf.keras.layers.DenseFeatures(claim_feature_columns)
 
-from sklearn.metrics import accuracy_score, f1_score, classification_report, roc_auc_score
-y_true = pred_test_df['label_value'].values
-y_pred = pred_test_df['score'].values
-print(classification_report(y_true, y_pred))
-print(roc_auc_score(y_true, y_pred))
-
-# Visualisation with plot_metric
-bc = BinaryClassification(y_true, y_pred, labels=["Class 1", "Class 2"])
-
-# Figures
-plt.figure(figsize=(5,5))
-bc.plot_roc_curve()
-plt.show()
+with open('model.pkl', 'rb') as pickle_file:
+    content = pickle.load(pickle_file)
+survival_model = pickle.load(open('model.pkl', 'rb'))
