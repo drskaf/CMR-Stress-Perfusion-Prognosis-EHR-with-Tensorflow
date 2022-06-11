@@ -3,7 +3,6 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
 import os
-from student_utils import create_tf_numeric_feature
 import functools
 
 
