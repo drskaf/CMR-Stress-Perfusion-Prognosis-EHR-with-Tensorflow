@@ -9,6 +9,7 @@ from utils import create_tf_categorical_feature_cols, patient_dataset_splitter, 
 from plot_metric.functions import BinaryClassification
 from keras.models import model_from_json, load_model
 import pickle
+from sklearn.metrics import accuracy_score, f1_score, classification_report, roc_auc_score
 
 # Load test data
 test_data = pd.read_csv('test_data.csv')
@@ -51,3 +52,22 @@ claim_feature_layer = tf.keras.layers.DenseFeatures(claim_feature_columns)
 with open('model.pkl', 'rb') as pickle_file:
     content = pickle.load(pickle_file)
 survival_model = pickle.load(open('model.pkl', 'rb'))
+
+preds = survival_model.predict(survival_test_ds)
+pred_test = []
+for p in preds:
+    pred = np.argmax(p)
+    pred_test.append(pred)
+print(pred_test[:5])
+survival_yhat = list(test_data['Event'].values)
+print(survival_yhat[:5])
+
+prob_outputs = {
+    "pred": pred_test,
+    "actual_value": survival_yhat
+}
+prob_output_df = pd.DataFrame(prob_outputs)
+print(prob_output_df.head())
+
+print(classification_report(survival_yhat, pred_test))
+print(roc_auc_score(survival_yhat, pred_test))
