@@ -154,7 +154,7 @@ def patient_dataset_splitter(df, patient_key='patient_TrustNumber'):
      - test: pandas dataframe,
     '''
 
-    df = df.iloc[np.random.permutation(len(df))]
+    df.iloc[np.random.permutation(len(df))]
     unique_values = df[patient_key].unique()
     total_values = len(unique_values)
     sample_size = round(total_values * 0.6)
@@ -163,6 +163,15 @@ def patient_dataset_splitter(df, patient_key='patient_TrustNumber'):
     validation = df[df[patient_key].isin(unique_values[:val_size])].reset_index(drop=True)
     val_test = df[df[patient_key].isin(unique_values[sample_size:])].reset_index(drop=True)
     test = val_test.drop(validation.index)
+    
+    x_train = train
+    y_train = train['Event'].values
+    x_validation = validation
+    y_validation = validation['Event'].values
+    over_sampler = RandomOverSampler(sampling_strategy='minority')
+    train, y = over_sampler.fit_resample(x_train, y_train)
+    validation, y = over_sampler.fit_resample(x_validation, y_validation)
+        
     return train, validation, test
 
 
