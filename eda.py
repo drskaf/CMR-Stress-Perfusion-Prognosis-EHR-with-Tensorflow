@@ -323,3 +323,14 @@ rvm3 = pd.Series(data=age_group3['RVEF_(%)'].astype('int'))
 print('RVEF mean for group 3:\n{}'.format(rvm3.mean()))
 print('RVEF SD for group 3:\n{}'.format(rvm3.std()))
 print('One Way ANOVA test RVEF: \n{}'.format(stats.f_oneway(rvm1, rvm2, rvm3)))
+
+# scatter plot
+fig, axs = plt.subplots(1,2)
+bins = [0,65,75,np.inf]
+names = ['<65', '65-75', '>75']
+data['Age'] = pd.cut(data['Age_on_20.08.2021'], bins, labels=names)
+sns.catplot(x="Age", y="Positive_perf", hue='patient_GenderCode', kind="bar", data=data, ax=axs[0])
+plt.text(1, 0.45, "p value <0.001", horizontalalignment='left', size='medium', color='black', weight='normal')
+sns.catplot(x="Age", y="Positive_LGE", hue='patient_GenderCode', kind="bar", data=data, ax=axs[1])
+plt.text(1, 0.8, "p value <0.001", horizontalalignment='left', size='medium', color='black', weight='normal')
+plt.show()
