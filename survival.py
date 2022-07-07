@@ -145,16 +145,61 @@ print(aft.summary)
 aft.plot()
 plt.show()
 
+# checking for best survival model
 best_model, best_aic = find_best_parametric_model(event_times=survival_df['duration'], event_observed=survival_df['Event'],scoring_method='AIC')
 print('Best model is: {}'.format(best_model))
 
+# calculating hazard ratio models for all cause death
 cox = CoxPHFitter()
 cox.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Age + Gender + Essential_hypertension + Dyslipidaemia + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease')
 print(cox.summary)
 cox.baseline_hazard_.plot()
+plt.xlabel('Time (Days)')
+plt.ylabel('All Cause Death')
+plt.title('Clinical Model')
 plt.show()
 
 cox.check_assumptions(survival_df, p_value_threshold=0.05)
 cox.plot()
+plt.show()
+
+cox.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Positive_perf + Positive_LGE ')
+print(cox.summary)
+cox.baseline_hazard_.plot()
+plt.xlabel('Time (Days)')
+plt.ylabel('All Cause Death')
+plt.title('CMR Model')
+plt.show()
+
+cox.check_assumptions(survival_df, p_value_threshold=0.05)
+cox.plot()
+plt.show()
+
+# calculating hazard ratio models for VT/VF
+survival_df['VT_VF'] = survival_df[['Ventricular_tachycardia_(disorder)','Ventricular_fibrillation_(disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
+cox.fit(df=survival_df, duration_col='duration', event_col='VT_VF', formula= 'Age + Gender + Essential_hypertension + Dyslipidaemia + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease')
+print(cox.summary)
+cox.baseline_hazard_.plot()
+plt.xlabel('Time (Days)')
+plt.ylabel('Ventricular Arrhythmia')
+plt.title('Clinical Model')
+plt.show()
+
+cox.check_assumptions(survival_df, p_value_threshold=0.05)
+cox.plot()
+plt.title('Clinical Hazard Model for Ventricular Arrhythmia')
+plt.show()
+
+cox.fit(df=survival_df, duration_col='duration', event_col='VT_VF', formula= 'Positive_perf + Positive_LGE ')
+print(cox.summary)
+cox.baseline_hazard_.plot()
+plt.xlabel('Time (Days)')
+plt.ylabel('Ventricular Arrhythmia')
+plt.title('CMR Model')
+plt.show()
+
+cox.check_assumptions(survival_df, p_value_threshold=0.05)
+cox.plot()
+plt.title('CMR Hazard Model for Ventricular Arrhythmia')
 plt.show()
 
