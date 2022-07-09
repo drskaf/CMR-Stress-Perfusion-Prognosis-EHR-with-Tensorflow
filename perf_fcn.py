@@ -15,25 +15,13 @@ pd.set_option('display.max_columns', 500)
 
 # Load dataset
 survival_df = pd.read_csv('final.csv')
-survival_df = survival_df[['p_basal_anterior', 'p_basal_anteroseptum', 'p_mid_anterior', 'p_mid_anteroseptum', 'p_apical_anterior',
-     'p_apical_septum','p_basal_inferolateral', 'p_basal_anterolateral', 'p_mid_inferolateral', 'p_mid_anterolateral',
-     'p_apical_lateral','p_basal_inferoseptum', 'p_basal_inferior', 'p_mid_inferoseptum', 'p_mid_inferior', 'p_apical_inferior', 'Event', 'patient_TrustNumber']]
-survival_df['p_basal_anterior'] = survival_df['p_basal_anterior'].astype(str)
-survival_df['p_basal_anteroseptum'] = survival_df['p_basal_anteroseptum'].astype(str)
-survival_df['p_mid_anterior'] = survival_df['p_mid_anterior'].astype(str)
-survival_df['p_mid_anteroseptum'] = survival_df['p_mid_anteroseptum'].astype(str)
-survival_df['p_apical_anterior'] = survival_df['p_apical_anterior'].astype(str)
-survival_df['p_apical_septum'] = survival_df['p_apical_septum'].astype(str)
-survival_df['p_basal_inferolateral'] = survival_df['p_basal_inferolateral'].astype(str)
-survival_df['p_basal_anterolateral'] = survival_df['p_basal_anterolateral'].astype(str)
-survival_df['p_mid_inferolateral'] = survival_df['p_mid_inferolateral'].astype(str)
-survival_df['p_mid_anterolateral'] = survival_df['p_mid_anterolateral'].astype(str)
-survival_df['p_apical_lateral'] = survival_df['p_apical_lateral'].astype(str)
-survival_df['p_basal_inferoseptum'] = survival_df['p_basal_inferoseptum'].astype(str)
-survival_df['p_basal_inferior'] = survival_df['p_basal_inferior'].astype(str)
-survival_df['p_mid_inferoseptum'] = survival_df['p_mid_inferoseptum'].astype(str)
-survival_df['p_mid_inferior'] = survival_df['p_mid_inferior'].astype(str)
-survival_df['p_apical_inferior'] = survival_df['p_apical_inferior'].astype(str)
+survival_df['Gender'] = survival_df['patient_GenderCode'].astype('category')
+survival_df['Gender'] = survival_df['Gender'].cat.codes
+survival_df['Chronic_kidney_disease'] = survival_df['Chronic_kidney_disease_(disorder)'].astype(str)
+survival_df['Age'] = survival_df['Age_on_20.08.2021'].astype(int)
+survival_df['Hypertension'] = survival_df['Essential_hypertension'].astype(str)
+survival_df['Gender'] = survival_df['Gender'].astype(str)
+survival_df['Heart_failure'] = survival_df['Heart_failure_(disorder)'].astype(str)
 
 # Define columns
 categorical_col_list = ['p_basal_anterior', 'p_basal_anteroseptum', 'p_mid_anterior', 'p_mid_anteroseptum', 'p_apical_anterior',
@@ -41,13 +29,21 @@ categorical_col_list = ['p_basal_anterior', 'p_basal_anteroseptum', 'p_mid_anter
      'p_apical_lateral','p_basal_inferoseptum', 'p_basal_inferior', 'p_mid_inferoseptum', 'p_mid_inferior', 'p_apical_inferior']
 PREDICTOR_FIELD = 'Event'
 
+# preprocess the data
+def select_model_features(df, categorical_col_list, numerical_col_list, PREDICTOR_FIELD, grouping_key='patient_TrustNumber'):
+    selected_col_list = [grouping_key] + [PREDICTOR_FIELD] + categorical_col_list + numerical_col_list
+    return survival_df[selected_col_list]
+
+
+selected_features_df = select_model_features(survival_df, categorical_col_list, numerical_col_list,
+                                             PREDICTOR_FIELD)
+processed_df = preprocess_df(selected_features_df, categorical_col_list,
+        numerical_col_list, PREDICTOR_FIELD, categorical_impute_value='nan', numerical_impute_value=0)
+
 # Split data
 d_train, d_val, d_test = patient_dataset_splitter(survival_df, 'patient_TrustNumber')
 assert len(d_train) + len(d_val) + len(d_test) == len(survival_df)
 print("Test passed for number of total rows equal!")
-d_train = d_train.drop(columns=['patient_TrustNumber'])
-d_val = d_val.drop(columns=['patient_TrustNumber'])
-d_test = d_test.drop(columns=['patient_TrustNumber'])
 d_test.to_csv('test_data.csv')
 
 # Convert dataset from Pandas dataframes to TF dataset
