@@ -82,7 +82,12 @@ tf.random.set_seed(1234)
 claim_feature_columns = tf_cat_col_list
 claim_feature_layer = tf.keras.layers.DenseFeatures(claim_feature_columns)
 
-optimizer = tf.keras.optimizers.RMSprop(0.000001)
+def scheduler(epoch, lr):
+    if epoch<10:
+        return lr
+    else:
+        return lr * tf.math.exp(-0.1)
+     
 def build_sequential_model(feature_layer):
     model = tf.keras.Sequential([
         feature_layer,
@@ -103,8 +108,8 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
 
 def build_survival_model(train_ds, val_ds,  feature_layer,  epochs=5, loss_metric='mse'):
     model = build_sequential_model(feature_layer)
-    model.compile(optimizer=optimizer, loss=loss_metric, metrics=['accuracy'])
-    early_stop = tf.keras.callbacks.EarlyStopping(monitor=loss_metric, patience=5)
+    model.compile(optimizer='RMSprop', loss=loss_metric, metrics=['accuracy'])
+    early_stop = tf.keras.callbacks.LearningRateScheduler(scheduler)
     history = model.fit(train_ds, validation_data=val_ds,
                         callbacks=[cp_callback,early_stop],
                         epochs=epochs)
