@@ -2,7 +2,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 import numpy as np
 from sklearn.svm import SVC
-from sklearn.metrics import roc_auc_score, accuracy_score, f1_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, roc_curve
 import matplotlib.pyplot as plt
 import pandas as pd
 from utils import  patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
@@ -22,7 +24,7 @@ survival_df['Gender'] = survival_df['Gender'].astype(str)
 survival_df['Heart_failure'] = survival_df['Heart_failure_(disorder)'].astype(str)
 
 # Define columns
-categorical_col_list = ['Positive_perf','Positive_LGE','Chronic_kidney_disease','Hypertension', 'Gender', 'Heart_failure' ]
+categorical_col_list = ['Chronic_kidney_disease','Hypertension', 'Gender', 'Heart_failure' ]
 numerical_col_list= ['Age']
 PREDICTOR_FIELD = 'Event'
 
@@ -49,12 +51,47 @@ x_train = d_train[categorical_col_list + numerical_col_list]
 y_train = d_train[PREDICTOR_FIELD]
 x_test = d_test[categorical_col_list + numerical_col_list]
 y_test = d_test[PREDICTOR_FIELD]
-svc_model.fit(x_train, y_train)
 
+svc_model.fit(x_train, y_train)
 svc_predict = svc_model.predict(x_test)
 
 print('ROCAUC score:',roc_auc_score(y_test, svc_predict))
 print('Accuracy score:',accuracy_score(y_test, svc_predict))
 print('F1 score:',f1_score(y_test, svc_predict))
+
+# build linear regression model
+lr = LogisticRegression()
+
+lr.fit(x_train, y_train)
+
+lr_predict = lr.predict(x_test)
+print('ROCAUC score:',roc_auc_score(y_test, lr_predict))
+print('Accuracy score:',accuracy_score(y_test, lr_predict))
+print('F1 score:',f1_score(y_test, lr_predict))
+
+# build random forest model
+rfc = RandomForestClassifier()
+
+# fit the predictor and target
+rfc.fit(x_train, y_train)
+
+# predict
+rfc_predict = rfc.predict(x_test)# check performance
+print('ROCAUC score:',roc_auc_score(y_test, rfc_predict))
+print('Accuracy score:',accuracy_score(y_test, rfc_predict))
+print('F1 score:',f1_score(y_test, rfc_predict))
+
+fpr, tpr, _ = roc_curve(y_test, svc_predict)
+auc = round(roc_auc_score(y_test, svc_predict), 4)
+plt.plot(fpr,tpr,label="SVM Model, AUC="+str(auc))
+fpr, tpr, _ = roc_curve(y_test, lr_predict)
+auc = round(roc_auc_score(y_test, lr_predict), 4)
+plt.plot(fpr, tpr, label="Linear Regression Model, AUC="+str(auc))
+fpr, tpr, _ = roc_curve(y_test, rfc_predict)
+auc = round(roc_auc_score(y_test, rfc_predict), 4)
+plt.plot(fpr, tpr, label="Random Forest Model, AUC="+str(auc))
+plt.legend()
+plt.show()
+
 
 
