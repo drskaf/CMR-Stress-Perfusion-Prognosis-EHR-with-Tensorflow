@@ -35,8 +35,6 @@ def select_model_features(df, categorical_col_list, numerical_col_list, PREDICTO
 
 selected_features_df = select_model_features(survival_df, categorical_col_list, numerical_col_list,
                                              PREDICTOR_FIELD)
-processed_df = preprocess_df(selected_features_df, categorical_col_list,
-        numerical_col_list, PREDICTOR_FIELD, categorical_impute_value='nan', numerical_impute_value=0)
 
 for c in categorical_col_list:
     selected_features_df[c] = selected_features_df[c].astype(bool)
