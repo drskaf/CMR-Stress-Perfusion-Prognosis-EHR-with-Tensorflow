@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, roc_curve
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -37,6 +38,9 @@ selected_features_df = select_model_features(survival_df, categorical_col_list, 
 processed_df = preprocess_df(selected_features_df, categorical_col_list,
         numerical_col_list, PREDICTOR_FIELD, categorical_impute_value='nan', numerical_impute_value=0)
 
+for c in categorical_col_list:
+    selected_features_df[c] = selected_features_df[c].astype(bool)
+
 # Split data
 d_train, d_val, d_test = patient_dataset_splitter(selected_features_df, 'patient_TrustNumber')
 d_train = d_train.drop(columns=['patient_TrustNumber'])
@@ -45,19 +49,20 @@ d_train.to_csv('train_data.csv')
 d_val.to_csv('valid_data.csv')
 d_test.to_csv('test_data.csv')
 
-# fit SVM model
-svc_model = SVC(class_weight='balanced', probability=True)
 x_train = d_train[categorical_col_list + numerical_col_list]
 y_train = d_train[PREDICTOR_FIELD]
 x_test = d_test[categorical_col_list + numerical_col_list]
 y_test = d_test[PREDICTOR_FIELD]
 
+# fit SVM model
+svc_model = SVC(class_weight='balanced', probability=True)
+
 svc_model.fit(x_train, y_train)
 svc_predict = svc_model.predict(x_test)
 
-print('ROCAUC score:',roc_auc_score(y_test, svc_predict))
-print('Accuracy score:',accuracy_score(y_test, svc_predict))
-print('F1 score:',f1_score(y_test, svc_predict))
+print('SVM ROCAUC score:',roc_auc_score(y_test, svc_predict))
+print('SVM Accuracy score:',accuracy_score(y_test, svc_predict))
+print('SVM F1 score:',f1_score(y_test, svc_predict))
 
 # build linear regression model
 lr = LogisticRegression()
@@ -65,33 +70,44 @@ lr = LogisticRegression()
 lr.fit(x_train, y_train)
 
 lr_predict = lr.predict(x_test)
-print('ROCAUC score:',roc_auc_score(y_test, lr_predict))
-print('Accuracy score:',accuracy_score(y_test, lr_predict))
-print('F1 score:',f1_score(y_test, lr_predict))
+print('LR ROCAUC score:',roc_auc_score(y_test, lr_predict))
+print('LR Accuracy score:',accuracy_score(y_test, lr_predict))
+print('LR F1 score:',f1_score(y_test, lr_predict))
 
 # build random forest model
 rfc = RandomForestClassifier()
 
-# fit the predictor and target
 rfc.fit(x_train, y_train)
 
-# predict
 rfc_predict = rfc.predict(x_test)# check performance
-print('ROCAUC score:',roc_auc_score(y_test, rfc_predict))
-print('Accuracy score:',accuracy_score(y_test, rfc_predict))
-print('F1 score:',f1_score(y_test, rfc_predict))
+print('RF ROCAUC score:',roc_auc_score(y_test, rfc_predict))
+print('RF Accuracy score:',accuracy_score(y_test, rfc_predict))
+print('RF F1 score:',f1_score(y_test, rfc_predict))
 
+# build XGBoost Classifier model
+xgb_model = XGBClassifier().fit(x_train, y_train)
+
+xgb_predict = xgb_model.predict(x_test)
+print('XGB ROCAUC score:',roc_auc_score(y_test, xgb_predict))
+print('XGB Accuracy score:',accuracy_score(y_test, xgb_predict))
+print('XGB F1 score:',f1_score(y_test, xgb_predict))
+
+# plot AUC
 fpr, tpr, _ = roc_curve(y_test, svc_predict)
-auc = round(roc_auc_score(y_test, svc_predict), 4)
+auc = round(roc_auc_score(y_test, svc_predict), 2)
 plt.plot(fpr,tpr,label="SVM Model, AUC="+str(auc))
 fpr, tpr, _ = roc_curve(y_test, lr_predict)
-auc = round(roc_auc_score(y_test, lr_predict), 4)
+auc = round(roc_auc_score(y_test, lr_predict), 2)
 plt.plot(fpr, tpr, label="Linear Regression Model, AUC="+str(auc))
 fpr, tpr, _ = roc_curve(y_test, rfc_predict)
-auc = round(roc_auc_score(y_test, rfc_predict), 4)
+auc = round(roc_auc_score(y_test, rfc_predict), 2)
 plt.plot(fpr, tpr, label="Random Forest Model, AUC="+str(auc))
+fpr, tpr, _ = roc_curve(y_test, xgb_predict)
+auc = round(roc_auc_score(y_test, xgb_predict), 2)
+plt.plot(fpr, tpr, label="XGBoost Classifier Model, AUC="+str(auc))
 plt.legend()
 plt.show()
+
 
 
 
