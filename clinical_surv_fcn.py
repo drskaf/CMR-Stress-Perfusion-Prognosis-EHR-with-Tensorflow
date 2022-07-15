@@ -100,7 +100,7 @@ claim_feature_layer = tf.keras.layers.DenseFeatures(claim_feature_columns)
     #else:
         #return lr * tf.math.exp(-0.1)
 
-optimizer = tf.keras.optimizers.RMSprop(1e-9)
+optimizer = tf.keras.optimizers.RMSprop(0.00001)
 def build_sequential_model(feature_layer):
     model = tf.keras.Sequential([
         feature_layer,
