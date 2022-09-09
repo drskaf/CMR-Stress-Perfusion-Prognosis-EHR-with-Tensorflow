@@ -2,33 +2,34 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 import os
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import layers
+from tensorflow.keras import layers, regularizers
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping, ReduceLROnPlateau
 import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
 import pandas as pd
 import aequitas as ae
-#from student_utils import patient_dataset_splitter
-from utils import  patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
+from student_utils import patient_dataset_splitter
+from utils import build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
 from plot_metric.functions import BinaryClassification
 import pickle
 
 pd.set_option('display.max_columns', 500)
 
-
 # Load dataset
 survival_df = pd.read_csv('final.csv')
 survival_df['Gender'] = survival_df['patient_GenderCode'].astype('category')
 survival_df['Gender'] = survival_df['Gender'].cat.codes
-survival_df['Chronic_kidney_disease'] = survival_df['Chronic_kidney_disease_(disorder)'].astype(str)
+survival_df['Chronic_kidney_disease'] = survival_df['Chronic_kidney_disease_(disorder)'].astype(int)
 survival_df['Age'] = survival_df['Age_on_20.08.2021'].astype(int)
-survival_df['Hypertension'] = survival_df['Essential_hypertension'].astype(str)
-survival_df['Gender'] = survival_df['Gender'].astype(str)
-survival_df['Heart_failure'] = survival_df['Heart_failure_(disorder)'].astype(str)
+survival_df['Hypertension'] = survival_df['Essential_hypertension'].astype(int)
+survival_df['Gender'] = survival_df['Gender'].astype(int)
+survival_df['Heart_failure'] = survival_df['Heart_failure_(disorder)'].astype(int)
+survival_df['LVEF'] = survival_df['LVEF_(%)']
+survival_df['Smoking'] = survival_df['Smoking_history'].astype(int)
 
 
 # Define columns
-categorical_col_list = ['Positive_perf','Positive_LGE','Chronic_kidney_disease','Hypertension', 'Gender', 'Heart_failure' ]
+categorical_col_list = ['Chronic_kidney_disease','Hypertension', 'Gender', 'Heart_failure', 'Smoking' ]
 numerical_col_list= ['Age']
 PREDICTOR_FIELD = 'Event'
 
@@ -43,16 +44,22 @@ selected_features_df = select_model_features(survival_df, categorical_col_list, 
 processed_df = preprocess_df(selected_features_df, categorical_col_list,
         numerical_col_list, PREDICTOR_FIELD, categorical_impute_value='nan', numerical_impute_value=0)
 
-# Split data
-d_train, d_val, d_test = patient_dataset_splitter(selected_features_df, 'patient_TrustNumber')
+for v in processed_df['Age'].values:
+    mean = processed_df['Age'].describe()['mean']
+    std = processed_df['Age'].describe()['std']
+    v = v - mean / std
+
+    # Split data
+d_train, d_val, d_test = patient_dataset_splitter(processed_df, 'patient_TrustNumber')
 d_train = d_train.drop(columns=['patient_TrustNumber'])
 d_val = d_val.drop(columns=['patient_TrustNumber'])
-d_train.to_csv('train_data.csv')
-d_val.to_csv('valid_data.csv')
-d_test.to_csv('test_data.csv')
+d_test = d_test.drop(columns=['patient_TrustNumber'])
+d_train.to_csv('train_data1.csv')
+d_val.to_csv('valid_data1.csv')
+d_test.to_csv('test_data1.csv')
 
 # Convert dataset from Pandas dataframes to TF dataset
-batch_size = 10
+batch_size = 5
 survival_train_ds = df_to_dataset(d_train, PREDICTOR_FIELD, batch_size=batch_size)
 survival_val_ds = df_to_dataset(d_val, PREDICTOR_FIELD, batch_size=batch_size)
 survival_test_ds = df_to_dataset(d_test, PREDICTOR_FIELD, batch_size=batch_size)
@@ -100,14 +107,18 @@ claim_feature_layer = tf.keras.layers.DenseFeatures(claim_feature_columns)
     #else:
         #return lr * tf.math.exp(-0.1)
 
-optimizer = tf.keras.optimizers.RMSprop(0.00001)
+optimizer = tf.keras.optimizers.RMSprop(1e-6)
 def build_sequential_model(feature_layer):
     model = tf.keras.Sequential([
         feature_layer,
-        tf.keras.layers.Dense(100, activation='relu'),
-        tf.keras.layers.Dense(75, activation='relu'),
-        tf.keras.layers.Dense(50, activation='relu'),
-        tf.keras.layers.Dense(25, activation='relu'),
+        tf.keras.layers.Dense(100, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(75, activation='relu',kernel_regularizer=regularizers.l2(0.001)),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(50, activation='relu',kernel_regularizer=regularizers.l2(0.001)),
+        tf.keras.layers.Dropout(0.5),
+        tf.keras.layers.Dense(25, activation='relu',kernel_regularizer=regularizers.l2(0.001)),
+        tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(2, activation='softmax')
     ])
     return model
@@ -123,14 +134,14 @@ cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
 def build_survival_model(train_ds, val_ds,  feature_layer,  epochs, loss_metric='mse'):
     model = build_sequential_model(feature_layer)
     model.compile(optimizer=optimizer, loss=loss_metric, metrics=['accuracy'])
-    #early_stop = tf.keras.callbacks.LearningRateScheduler(scheduler)
+    #pyt
     early_stop = tf.keras.callbacks.EarlyStopping(monitor=loss_metric, patience=3)
     history = model.fit(train_ds, validation_data=val_ds,
                         callbacks=[early_stop, cp_callback],
                         epochs=epochs)
     return model, history
 
-survival_model, history = build_survival_model(survival_train_ds, survival_val_ds,  claim_feature_layer,  epochs=110)
+survival_model, history = build_survival_model(survival_train_ds, survival_val_ds,  claim_feature_layer,  epochs=1000)
 
 # summarize history for loss
 plt.plot(history.history['accuracy'])
@@ -140,10 +151,7 @@ plt.plot(history.history['val_loss'])
 plt.title('fcn model training')
 plt.ylabel('accuracy')
 plt.xlabel('epoch')
-plt.legend(['train', 'test'], loc='upper left')
+plt.legend(['train accuracy', 'validation accuracy', 'train loss', 'validation loss'], loc='upper left')
 plt.show()
 
-pickle.dump(survival_model, open('fcn_b.pkl', 'wb'))
-
-
-
+pickle.dump(survival_model, open('fcn.pkl', 'wb'))
