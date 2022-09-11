@@ -235,3 +235,44 @@ def get_student_binary_prediction(df, col):
     student_binary_prediction = df[col].apply(lambda x: 1 if x >= 1 else 0).values
     print(f'### Transformed to numpy: {type(student_binary_prediction)}, shape: {student_binary_prediction.shape}')
     return student_binary_prediction
+
+def patient_dataset_splitter_balance(df, patient_key='patient_TrustNumber'):
+    '''
+    df: pandas dataframe, input dataset that will be split
+    patient_key: string, column that is the patient id
+
+    return:
+     - train: pandas dataframe,
+     - validation: pandas dataframe,
+     - test: pandas dataframe,
+    '''
+    df.iloc[np.random.permutation(len(df))]
+    unique_values = df[patient_key].unique()
+    total_values = len(unique_values)
+    sample_size = round(total_values * 0.6)
+    val_size = round(total_values * 0.2)
+    train = df[df[patient_key].isin(unique_values[:sample_size])].reset_index(drop=True)
+    validation = df[df[patient_key].isin(unique_values[:val_size])].reset_index(drop=True)
+    val_test = df[df[patient_key].isin(unique_values[sample_size:])].reset_index(drop=True)
+    test = val_test.drop(validation.index)
+    
+    p_inds = train[train['Event']==1].index.tolist()
+    np_inds = train[train['Event']==0].index.tolist()
+    np_sample = sample(np_inds, 12*len(p_inds))
+    train = train.loc[p_inds + np_sample]
+    train['Event'].sum()/len(train)
+    
+    p_inds = validation[validation['Event']==1].index.tolist()
+    np_inds = validation[validation['Event']==0].index.tolist()
+    np_sample = sample(np_inds, 1*len(p_inds))
+    validation = validation.loc[p_inds + np_sample]
+    validation['Event'].sum()/len(validation)
+    
+    p_inds = test[test['Event']==1].index.tolist()
+    np_inds = test[test['Event']==0].index.tolist()
+    np_sample = sample(np_inds, 1*len(p_inds))
+    test = test.loc[p_inds + np_sample]
+    test['Event'].sum()/len(test)
+    
+        
+    return train, validation, test
