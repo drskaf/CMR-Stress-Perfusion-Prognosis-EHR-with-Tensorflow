@@ -111,11 +111,9 @@ def build_sequential_model(feature_layer):
         tf.keras.layers.Dense(250, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
         tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(100, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
-        tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(75, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
         tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(50, activation='relu',kernel_regularizer=regularizers.l2(0.001)),
-        tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(25, activation='relu',kernel_regularizer=regularizers.l2(0.001)),
         tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(2, activation='softmax')
