@@ -14,6 +14,9 @@ from lifelines.utils import find_best_parametric_model
 survival_df = pd.read_csv('final.csv')
 survival_df['duration'] = [(x.split(' ')[0]) for x in survival_df['Duration']]
 survival_df['duration'] = pd.to_numeric(survival_df["duration"], downcast="float")
+survival_dfe = survival_df[survival_df['Event']==1]
+print(survival_dfe['duration'].min())
+print(survival_dfe['duration'].max())
 
 lad = (survival_df['LAD_perf']==1)
 lcx = (survival_df['LCx_perf']==1)
@@ -40,7 +43,7 @@ print("The median survival duration (days) of patients with LAD ischaemia: ", la
 print("The median survival duration (days) of patients with LCx ischaemia: ", lcx_km.median_survival_time_)
 print("The median survival duration (days) of patients with RCA ischaemia: ", rca_km.median_survival_time_)
 plt.xlabel('Time (Days)')
-plt.ylabel('Survival to Event (Death)')
+plt.ylabel('Survival')
 plt.text(1000, 0.85, "Logrank p value=0.643", horizontalalignment='left', size='medium', color='black', weight='normal')
 plt.show()
 
@@ -68,7 +71,7 @@ neg_km.fit(durations=survival_df[neg]['duration'],
                event_observed=survival_df[neg]['Event'], label="Negative ischaemia")
 neg_km.plot_survival_function(ax=ax)
 plt.xlabel('Time (Days)')
-plt.ylabel('Survival to Event (Death)')
+plt.ylabel('Survival')
 plt.text(1000, 0.8, "Logrank p value <0.001", horizontalalignment='left', size='medium', color='black', weight='normal')
 plt.show()
 patient_results = logrank_test(durations_A = survival_df[pos]['duration'],
@@ -95,7 +98,7 @@ rcalge_km.fit(durations=survival_df[rca_lge]['duration'],
                event_observed=survival_df[rca_lge]['Event'], label="RCA LGE")
 rcalge_km.plot_survival_function(ax=ax, ci_show=False)
 plt.xlabel('Time (Days)')
-plt.ylabel('Survival to Event (Death)')
+plt.ylabel('Survival')
 plt.text(1000, 0.8, "Logrank p value=0.305", horizontalalignment='left', size='medium', color='black', weight='normal')
 plt.show()
 patient_results = logrank_test(durations_A = survival_df[lad_lge]['duration'],
@@ -120,7 +123,7 @@ neg_lge.fit(durations=survival_df[neglge]['duration'],
                event_observed=survival_df[neglge]['Event'], label="Negative ischaemic LGE")
 neg_lge.plot_survival_function(ax=ax)
 plt.xlabel('Time (Days)')
-plt.ylabel('Survival to Event (Death)')
+plt.ylabel('Survival')
 plt.text(500, 0.8, "Logrank p value <0.001", horizontalalignment='left', size='medium', color='black', weight='normal')
 plt.show()
 patient_results = logrank_test(durations_A = survival_df[poslge]['duration'],
@@ -136,26 +139,21 @@ survival_df['Chronic_kidney_disease'] = survival_df['Chronic_kidney_disease_(dis
 survival_df['Heart_failure'] = survival_df['Heart_failure_(disorder)']
 survival_df['Age'] = survival_df['Age_on_20.08.2021']
 survival_df['Gender'] = survival_df['patient_GenderCode']
+survival_df['LVEF'] = survival_df['LVEF_(%)']
+survival_df['RVEF'] = survival_df['RVEF_(%)']
 
 print(survival_df.head())
 
-aft = WeibullAFTFitter()
-aft.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Age + Gender + Essential_hypertension + Dyslipidaemia + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease')
-print(aft.summary)
-aft.plot()
-plt.show()
-
-# checking for best survival model
 best_model, best_aic = find_best_parametric_model(event_times=survival_df['duration'], event_observed=survival_df['Event'],scoring_method='AIC')
 print('Best model is: {}'.format(best_model))
 
 # calculating hazard ratio models for all cause death
 cox = CoxPHFitter()
-cox.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Age + Gender + Essential_hypertension + Dyslipidaemia + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease')
+cox.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Age + Gender + Essential_hypertension + Dyslipidaemia + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease + Smoking_history ')
 print(cox.summary)
 cox.baseline_hazard_.plot()
 plt.xlabel('Time (Days)')
-plt.ylabel('All Cause Death')
+plt.ylabel('All Cause Mortality')
 plt.title('Clinical Model')
 plt.show()
 
@@ -167,7 +165,7 @@ cox.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Po
 print(cox.summary)
 cox.baseline_hazard_.plot()
 plt.xlabel('Time (Days)')
-plt.ylabel('All Cause Death')
+plt.ylabel('All Cause Mortality')
 plt.title('CMR Model')
 plt.show()
 
@@ -177,7 +175,7 @@ plt.show()
 
 # calculating hazard ratio models for VT/VF
 survival_df['VT_VF'] = survival_df[['Ventricular_tachycardia_(disorder)','Ventricular_fibrillation_(disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-cox.fit(df=survival_df, duration_col='duration', event_col='VT_VF', formula= 'Age + Gender + Essential_hypertension + Dyslipidaemia + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease')
+cox.fit(df=survival_df, duration_col='duration', event_col='VT_VF', formula= 'Age + Gender + Essential_hypertension + Dyslipidaemia + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease + Smoking_history')
 print(cox.summary)
 cox.baseline_hazard_.plot()
 plt.xlabel('Time (Days)')
@@ -221,3 +219,4 @@ plt.xlabel('Time (Days)')
 plt.ylabel('Survival')
 plt.title('RVEF Model')
 plt.show()
+
