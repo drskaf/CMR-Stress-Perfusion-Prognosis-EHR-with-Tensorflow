@@ -6,10 +6,9 @@ from tensorflow.keras import layers, regularizers
 from tensorflow.keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping, ReduceLROnPlateau
 import tensorflow_probability as tfp
 import matplotlib.pyplot as plt
-import pandas as pd   
+import pandas as pd
 import aequitas as ae
-from student_utils import patient_dataset_splitter
-from utils import build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
+from utils import patient_dataset_splitter_balance, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
 from plot_metric.functions import BinaryClassification
 import pickle
 
@@ -29,8 +28,8 @@ survival_df['Smoking'] = survival_df['Smoking_history'].astype(int)
 
 
 # Define columns
-categorical_col_list = ['Chronic_kidney_disease','Hypertension', 'Gender', 'Heart_failure', 'Smoking' ]
-numerical_col_list= ['Age']
+categorical_col_list = ['Chronic_kidney_disease','Hypertension', 'Gender', 'Heart_failure', 'Smoking', 'Positive_LGE', 'Positive_perf' ]
+numerical_col_list= ['Age', 'LVEF']
 PREDICTOR_FIELD = 'Event'
 
 
@@ -49,7 +48,12 @@ for v in processed_df['Age'].values:
     std = processed_df['Age'].describe()['std']
     v = v - mean / std
 
-    # Split data
+for x in processed_df['LVEF'].values:
+    mean = processed_df['LVEF'].describe()['mean']
+    std = processed_df['LVEF'].describe()['std']
+    x = x - mean / std
+
+# Split data
 d_train, d_val, d_test = patient_dataset_splitter(processed_df, 'patient_TrustNumber')
 d_train = d_train.drop(columns=['patient_TrustNumber'])
 d_val = d_val.drop(columns=['patient_TrustNumber'])
@@ -78,7 +82,6 @@ tf_cat_col_list = create_tf_categorical_feature_cols(categorical_col_list)
 # Test a batch
 test_cat_var1 = tf_cat_col_list[0]
 print("Example categorical field:\n{}".format(test_cat_var1))
-demo(test_cat_var1, survival_batch)
 
 # create numerical features
 def create_tf_numerical_feature_cols(numerical_col_list, train_df):
@@ -101,19 +104,15 @@ tf.random.set_seed(1234)
 claim_feature_columns = tf_cat_col_list + tf_cont_col_list
 claim_feature_layer = tf.keras.layers.DenseFeatures(claim_feature_columns)
 
-#def scheduler(epoch, lr):
-    #if epoch<10:
-        #return lr
-    #else:
-        #return lr * tf.math.exp(-0.1)
-
 optimizer = tf.keras.optimizers.RMSprop(1e-6)
 def build_sequential_model(feature_layer):
     model = tf.keras.Sequential([
         feature_layer,
+        tf.keras.layers.Dense(250, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
+        tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(100, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
         tf.keras.layers.Dropout(0.5),
-        tf.keras.layers.Dense(75, activation='relu',kernel_regularizer=regularizers.l2(0.001)),
+        tf.keras.layers.Dense(75, activation='relu', kernel_regularizer=regularizers.l2(0.001)),
         tf.keras.layers.Dropout(0.5),
         tf.keras.layers.Dense(50, activation='relu',kernel_regularizer=regularizers.l2(0.001)),
         tf.keras.layers.Dropout(0.5),
@@ -123,12 +122,12 @@ def build_sequential_model(feature_layer):
     ])
     return model
 
-checkpoint_path = "training/fcn.h5"
+checkpoint_path = "training/fcn1.h5"
 checkpoint_dir = os.path.dirname(checkpoint_path)
 
 # Create a callback that saves the model's weights
 cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path,
-                                                 save_best_only=False,
+                                                 save_best_only=True,
                                                  verbose=1)
 
 def build_survival_model(train_ds, val_ds,  feature_layer,  epochs, loss_metric='mse'):
@@ -141,7 +140,7 @@ def build_survival_model(train_ds, val_ds,  feature_layer,  epochs, loss_metric=
                         epochs=epochs)
     return model, history
 
-survival_model, history = build_survival_model(survival_train_ds, survival_val_ds,  claim_feature_layer,  epochs=1000)
+survival_model, history = build_survival_model(survival_train_ds, survival_val_ds,  claim_feature_layer,  epochs=500)
 
 # summarize history for loss
 plt.plot(history.history['accuracy'])
@@ -154,4 +153,4 @@ plt.xlabel('epoch')
 plt.legend(['train accuracy', 'validation accuracy', 'train loss', 'validation loss'], loc='upper left')
 plt.show()
 
-pickle.dump(survival_model, open('fcn.pkl', 'wb'))
+pickle.dump(survival_model, open('fcn1.pkl', 'wb'))
