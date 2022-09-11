@@ -54,7 +54,7 @@ for x in processed_df['LVEF'].values:
     x = x - mean / std
 
 # Split data
-d_train, d_val, d_test = patient_dataset_splitter(processed_df, 'patient_TrustNumber')
+d_train, d_val, d_test = patient_dataset_splitter_balance(processed_df, 'patient_TrustNumber')
 d_train = d_train.drop(columns=['patient_TrustNumber'])
 d_val = d_val.drop(columns=['patient_TrustNumber'])
 d_test = d_test.drop(columns=['patient_TrustNumber'])
