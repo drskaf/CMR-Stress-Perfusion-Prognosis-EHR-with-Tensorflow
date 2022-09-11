@@ -66,6 +66,18 @@ print('Percentage male 2: \n{}'.format(len(male2)/len(age_group2)))
 print('Percentage male 3: \n{}'.format(len(male3)/len(age_group3)))
 print('Kruskal Wallis significance test: \n{}'.format(stats.kruskal((age_group1['Gender'].values), age_group2['Gender'].values, age_group3['Gender'].values)))
 
+# calculating smoking
+smoke1 = (age_group1[age_group1['Smoking_history']==1])
+smoke2 = (age_group2[age_group2['Smoking_history']==1])
+smoke3 = (age_group3[age_group3['Smoking_history']==1])
+print('Number of smoking in group 1:\n{}'.format(len(smoke1)))
+print('Number of smoking in group 2:\n{}'.format(len(smoke2)))
+print('Number of smoking in group 3:\n{}'.format(len(smoke3)))
+print('Percentage smoking 1: \n{}'.format(len(smoke1)/len(age_group1)))
+print('Percentage smoking 2: \n{}'.format(len(smoke2)/len(age_group2)))
+print('Percentage smoking 3: \n{}'.format(len(smoke3)/len(age_group3)))
+print('Kruskal Wallis significance test: \n{}'.format(stats.kruskal((age_group1['Smoking_history'].values), age_group2['Smoking_history'].values, age_group3['Smoking_history'].values)))
+
 # calculating diabetes
 dm1 = (age_group1[age_group1['Diabetes_mellitus_(disorder)']==1])
 dm2 = (age_group2[age_group2['Diabetes_mellitus_(disorder)']==1])
@@ -311,6 +323,9 @@ lvm3 = pd.Series(data=age_group3['LVEF_(%)'].astype('int'))
 print('LVEF mean for group 3:\n{}'.format(lvm3.mean()))
 print('LVEF SD for group 3:\n{}'.format(lvm3.std()))
 print('One Way ANOVA test LVEF: \n{}'.format(stats.f_oneway(lvm1, lvm2, lvm3)))
+lvm = pd.Series(data=data['LVEF_(%)'].astype('int'))
+print('LVEF mean for total:\n{}'.format(lvm.mean()))
+print('LVEF SD for total:\n{}'.format(lvm.std()))
 
 # calculating RV function
 rvm1 = pd.Series(data=age_group1['RVEF_(%)'].astype('int'))
@@ -323,6 +338,64 @@ rvm3 = pd.Series(data=age_group3['RVEF_(%)'].astype('int'))
 print('RVEF mean for group 3:\n{}'.format(rvm3.mean()))
 print('RVEF SD for group 3:\n{}'.format(rvm3.std()))
 print('One Way ANOVA test RVEF: \n{}'.format(stats.f_oneway(rvm1, rvm2, rvm3)))
+rvm = pd.Series(data=data['RVEF_(%)'].astype('int'))
+print('RVEF mean for total:\n{}'.format(rvm.mean()))
+print('RVEF SD for total:\n{}'.format(rvm.std()))
+
+# plotting arrhythmia
+x = ('Asystole', 'Atrial fibrillation', 'Atrial flutter', '1st degree AV block', '2nd degree AV block', '3rd degree AV block', 'Sick sinus syndrome', 'Ventricular tachycardia', 'Ventricular fibrillation')
+y = [6, 485, 135, 30, 118, 4, 2, 39, 244]
+y_pos = np.arange(len(x))
+bars = plt.barh(y_pos, y)
+for  bar in bars:
+    width = bar.get_width()
+    label_y = bar.get_y() + bar.get_height() / 2
+    plt.text(width, label_y, s=f'{width}')
+plt.yticks(y_pos, x)
+plt.show()
+
+# plotting clinical risk factors
+x = ('Smoking history','Cerebrovascular accident', 'Chronic kidney disease', 'Diabetes mellitus', 'Dyslipidemia', 'Heart failure', 'Myocardial infarction', 'Transient ischemic attack', 'Essential hypertension')
+y = [487, 257, 170, 136, 691, 517, 800, 150, 1264]
+y_pos = np.arange(len(x))
+bars = plt.barh(y_pos, y, color='purple')
+for  bar in bars:
+    width = bar.get_width()
+    label_y = bar.get_y() + bar.get_height() / 2
+    plt.text(width, label_y, s=f'{width}')
+plt.yticks(y_pos, x)
+plt.show()
+
+# plotting perfusion
+print(data['LAD_perf'].value_counts())
+print(data['LCx_perf'].value_counts())
+print(data['RCA_perf'].value_counts())
+x = ('LAD ischaemia', 'LCx ischaemia', 'RCA ischaemia')
+y = [621, 672, 712]
+y_pos = np.arange(len(x))
+bars = plt.barh(y_pos, y, color='slateblue')
+for  bar in bars:
+    width = bar.get_width()
+    label_y = bar.get_y() + bar.get_height() / 2
+    plt.text(width, label_y, s=f'{width}')
+plt.yticks(y_pos, x)
+plt.show()
+
+# plotting LGE
+print(data['LAD_LGE'].value_counts())
+print(data['LCx_LGE'].value_counts())
+print(data['RCA_LGE'].value_counts())
+x = ('LAD LGE', 'LCx LGE', 'RCA LGE')
+y = [686, 829, 921]
+y_pos = np.arange(len(x))
+bars = plt.barh(y_pos, y, color='yellowgreen')
+for  bar in bars:
+    width = bar.get_width()
+    label_y = bar.get_y() + bar.get_height() / 2
+    plt.text(width, label_y, s=f'{width}')
+plt.yticks(y_pos, x)
+plt.show()
+
 
 # scatter plot
 fig, axs = plt.subplots(1,2)
@@ -331,6 +404,8 @@ names = ['<65', '65-75', '>75']
 data['Age'] = pd.cut(data['Age_on_20.08.2021'], bins, labels=names)
 sns.catplot(x="Age", y="Positive_perf", hue='patient_GenderCode', kind="bar", data=data, ax=axs[0])
 plt.text(1, 0.45, "p value <0.001", horizontalalignment='left', size='medium', color='black', weight='normal')
+plt.ylabel('Positive stress perfusion')
 sns.catplot(x="Age", y="Positive_LGE", hue='patient_GenderCode', kind="bar", data=data, ax=axs[1])
 plt.text(1, 0.8, "p value <0.001", horizontalalignment='left', size='medium', color='black', weight='normal')
+plt.ylabel('Positive ischaemic LGE')
 plt.show()
