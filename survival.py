@@ -188,18 +188,6 @@ cox.plot()
 plt.title('Clinical Hazard Model for Ventricular Arrhythmia')
 plt.show()
 
-cox.fit(df=survival_df, duration_col='duration', event_col='VT_VF', formula= 'Positive_perf + Positive_LGE ')
-print(cox.summary)
-cox.baseline_hazard_.plot()
-plt.xlabel('Time (Days)')
-plt.ylabel('Ventricular Arrhythmia')
-plt.title('CMR Model')
-plt.show()
-
-cox.check_assumptions(survival_df, p_value_threshold=0.05)
-cox.plot()
-plt.title('CMR Hazard Model for Ventricular Arrhythmia')
-plt.show()
 
 # Weibull model analysis for continuous variables
 aft = WeibullAFTFitter()
