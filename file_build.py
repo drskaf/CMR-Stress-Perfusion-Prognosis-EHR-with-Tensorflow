@@ -18,7 +18,7 @@ df9 = pd.read_csv('CV_MRI_Comorbid/Cardiovascular MRI-annotations_01_901.csv')
 c_smokedf = pd.read_csv('CV_MRI_Comorbid/current smoker.csv')
 ex_smokedf = pd.read_csv('CV_MRI_Comorbid/Ex smoker.csv')
 c_smokedf = c_smokedf.set_index('patient_TrustNumber')
-ex_smokedf = ex_smokedf.set_index('patient_TrustNumber')
+ex_smokedf = ex_smokedf.set_index('patient_TrustNumber')  
 c_smokedf['Smoker'] = 1
 ex_smokedf['Ex'] = 1
 c_smokedf = c_smokedf.drop(columns=['document_MeasurementDate', 'Unnamed: 0'])
