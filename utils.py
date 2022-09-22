@@ -296,13 +296,13 @@ def patient_dataset_splitter_balance(df, patient_key='patient_TrustNumber'):
     
     p_inds = validation[validation['Event']==1].index.tolist()
     np_inds = validation[validation['Event']==0].index.tolist()
-    np_sample = sample(np_inds, 1*len(p_inds))
+    np_sample = sample(np_inds, 12*len(p_inds))
     validation = validation.loc[p_inds + np_sample]
     validation['Event'].sum()/len(validation)
     
     p_inds = test[test['Event']==1].index.tolist()
     np_inds = test[test['Event']==0].index.tolist()
-    np_sample = sample(np_inds, 1*len(p_inds))
+    np_sample = sample(np_inds, 12*len(p_inds))
     test = test.loc[p_inds + np_sample]
     test['Event'].sum()/len(test)
     
