@@ -11,7 +11,7 @@ from xgboost import XGBClassifier
 from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, roc_curve, classification_report
 import matplotlib.pyplot as plt
 import pandas as pd
-from utils import patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
+from utils import patient_dataset_splitter_compare, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
 from plot_metric.functions import BinaryClassification
 import pickle
 from keras.models import model_from_json, load_model
@@ -54,15 +54,14 @@ selected_features_df = select_model_features(survival_df, categorical_col_list, 
                                              PREDICTOR_FIELD)
 
 # Split data
-d_train, d_val, d_test = patient_dataset_splitter(selected_features_df, 'patient_TrustNumber')
+d_train, d_test = patient_dataset_splitter_compare(selected_features_df, 'patient_TrustNumber')
 d_train = d_train.drop(columns=['patient_TrustNumber'])
-d_val = d_val.drop(columns=['patient_TrustNumber'])
 d_test = d_test.drop(columns=['patient_TrustNumber'])
 
 x_train = d_train[categorical_col_list + numerical_col_list]
 y_train = d_train[PREDICTOR_FIELD]
-x_test = d_val[categorical_col_list + numerical_col_list]
-y_test = d_val[PREDICTOR_FIELD]
+x_test = d_test[categorical_col_list + numerical_col_list]
+y_test = d_test[PREDICTOR_FIELD]
 
 # fit SVM model
 svc_model = SVC(class_weight='balanced', probability=True)
@@ -97,7 +96,7 @@ print('RF F1 score:',f1_score(y_test, rfc_predict))
 # test neural network model
 
 # Load and preprocess test data
-test_data = d_val
+test_data = d_test
 
 processed_df = preprocess_df(test_data, categorical_col_list,
         numerical_col_list, PREDICTOR_FIELD, categorical_impute_value='nan', numerical_impute_value=0)
