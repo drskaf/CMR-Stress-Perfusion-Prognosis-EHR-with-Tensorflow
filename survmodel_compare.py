@@ -3,7 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-import tensorflow_probability as tfp
+import tensorflow_probability as tfp  
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
