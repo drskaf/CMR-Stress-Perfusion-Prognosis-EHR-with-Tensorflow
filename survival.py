@@ -7,7 +7,7 @@ from lifelines import LogNormalFitter
 from lifelines.statistics import logrank_test
 from lifelines import WeibullFitter
 from lifelines import WeibullAFTFitter
-from lifelines.plotting import qq_plot
+from lifelines.plotting import qq_plot   
 from lifelines import CoxPHFitter
 from lifelines.utils import find_best_parametric_model
 
