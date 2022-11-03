@@ -12,7 +12,6 @@ from xgboost import XGBClassifier
 from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, roc_curve, classification_report
 import matplotlib.pyplot as plt
 import pandas as pd
-from student_utils import patient_dataset_bi_splitter
 from utils import patient_dataset_splitter_compare, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
 from plot_metric.functions import BinaryClassification
 import pickle
