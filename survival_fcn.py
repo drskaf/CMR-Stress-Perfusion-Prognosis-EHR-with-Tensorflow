@@ -82,6 +82,7 @@ tf_cat_col_list = create_tf_categorical_feature_cols(categorical_col_list)
 # Test a batch
 test_cat_var1 = tf_cat_col_list[0]
 print("Example categorical field:\n{}".format(test_cat_var1))
+demo(test_cat_var1, survival_batch)
 
 # create numerical features
 def create_tf_numerical_feature_cols(numerical_col_list, train_df):
@@ -92,6 +93,9 @@ def create_tf_numerical_feature_cols(numerical_col_list, train_df):
     return tf_numeric_col_list
 
 tf_cont_col_list = create_tf_numerical_feature_cols(numerical_col_list, d_train)
+test_cont_var1 = tf_cont_col_list[0]
+print("Example continuous field:\n{}\n".format(test_cont_var1))
+demo(test_cont_var1, batch)
 
 import random
 random.seed(123)
