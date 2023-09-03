@@ -398,14 +398,20 @@ plt.show()
 
 
 # scatter plot
+data['Patient Gender'] = data['patient_GenderCode']
+plt.rcParams.update({'font.size': 16})
+sns.set(font_scale=1.3)
 fig, axs = plt.subplots(1,2)
 bins = [0,65,75,np.inf]
 names = ['<65', '65-75', '>75']
 data['Age'] = pd.cut(data['Age_on_20.08.2021'], bins, labels=names)
-sns.catplot(x="Age", y="Positive_perf", hue='patient_GenderCode', kind="bar", data=data, ax=axs[0])
+sns.catplot(x="Age", y="Positive_perf", hue='Patient Gender', kind="bar", data=data, ax=axs[0])
 plt.text(1, 0.45, "p value <0.001", horizontalalignment='left', size='medium', color='black', weight='normal')
-plt.ylabel('Positive stress perfusion')
-sns.catplot(x="Age", y="Positive_LGE", hue='patient_GenderCode', kind="bar", data=data, ax=axs[1])
+plt.ylabel('Positive stress perfusion', fontsize=16)
+plt.xlabel('Age', fontsize=16)
+sns.catplot(x="Age", y="Positive_LGE", hue='Patient Gender', kind="bar", data=data, ax=axs[1])
 plt.text(1, 0.8, "p value <0.001", horizontalalignment='left', size='medium', color='black', weight='normal')
-plt.ylabel('Positive ischaemic LGE')
+plt.ylabel('Positive ischaemic LGE', fontsize=16)
+plt.xlabel('Age', fontsize=16)
 plt.show()
+
