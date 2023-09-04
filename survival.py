@@ -38,6 +38,11 @@ rca_km.fit(durations=survival_df[rca]['duration'],
                event_observed=survival_df[rca]['Event'], label="RCA ischaemia")
 rca_km.plot_survival_function(ax=ax,ci_show=False)
 
+total = LogNormalFitter()
+total.fit(durations=survival_dfe['duration'],
+               event_observed=survival_dfe['Event'], label="total ischaemia")
+print("The median survival duration (days) of patients with positive ischaemia: ", total.median_survival_time_)
+
 # Print out the median survival duration of each group
 print("The median survival duration (days) of patients with LAD ischaemia: ", lad_km.median_survival_time_)
 print("The median survival duration (days) of patients with LCx ischaemia: ", lcx_km.median_survival_time_)
