@@ -138,15 +138,23 @@ patient_results = logrank_test(durations_A = survival_df[poslge]['duration'],
 # Print out the p-value of log-rank test results
 print('Log Rank test for LGE:\n{}'.format(patient_results.p_value))
 
-survival_df['Diabetes_mellitus'] = survival_df['Diabetes_mellitus_(disorder)']
-survival_df['Cerebrovascular_accident'] = survival_df['Cerebrovascular_accident_(disorder)']
-survival_df['Chronic_kidney_disease'] = survival_df['Chronic_kidney_disease_(disorder)']
-survival_df['Heart_failure'] = survival_df['Heart_failure_(disorder)']
+survival_df['DM'] = survival_df['Diabetes_mellitus_(disorder)']
+survival_df['CVA'] = survival_df['Cerebrovascular_accident_(disorder)']
+survival_df['CKD'] = survival_df['Chronic_kidney_disease_(disorder)']
+survival_df['HF'] = survival_df['Heart_failure_(disorder)']
 survival_df['Age'] = survival_df['Age_on_20.08.2021']
-survival_df['Gender'] = survival_df['patient_GenderCode']
+survival_df['Gender'] = survival_df['patient_GenderCode'].astype('category')
+survival_df['Gender'] = survival_df['Gender'].cat.codes
 survival_df['LVEF'] = survival_df['LVEF_(%)']
 survival_df['RVEF'] = survival_df['RVEF_(%)']
+survival_df['Smoking'] = survival_df['Smoking_history']
+survival_df['Positive ischaemia'] = survival_df['Positive_perf']
+survival_df['Positive LGE'] = survival_df['Positive_LGE']
+survival_df['HTN'] = survival_df['Essential_hypertension']
+survival_df['Gender'] = survival_df['Gender']
 
+heat_df = survival_df[['Age', 'Gender', 'HTN', 'Dyslipidaemia', 'DM', 'CVA', 'HF', 'CKD', 'Smoking', 'Positive ischaemia', 'Positive LGE']]
+sns.heatmap(heat_df.corr(), annot=True)
 print(survival_df.head())
 
 best_model, best_aic = find_best_parametric_model(event_times=survival_df['duration'], event_observed=survival_df['Event'],scoring_method='AIC')
@@ -154,9 +162,10 @@ print('Best model is: {}'.format(best_model))
 
 # calculating hazard ratio models for all cause death
 cox = CoxPHFitter()
-cox.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Age + Gender + Essential_hypertension + Dyslipidaemia + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease + Smoking_history ')
+cox.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Age + Gender + HTN + Dyslipidaemia + DM + CVA + HF + CKD + Smoking')
 print(cox.summary)
 cox.baseline_hazard_.plot()
+plt.rcParams.update({'font.size': 16})
 plt.xlabel('Time (Days)')
 plt.ylabel('All Cause Mortality')
 plt.title('Clinical Model')
@@ -166,21 +175,24 @@ cox.check_assumptions(survival_df, p_value_threshold=0.05)
 cox.plot()
 plt.show()
 
-cox.fit(df=survival_df, duration_col='duration', event_col='Event', formula= 'Positive_perf + Positive_LGE ')
+survival_dff = survival_df[['Positive ischaemia', 'Positive LGE', 'duration', 'Event']]
+
+cox.fit(df=survival_dff, duration_col='duration', event_col='Event')
 print(cox.summary)
 cox.baseline_hazard_.plot()
+plt.rcParams.update({'font.size': 16})
 plt.xlabel('Time (Days)')
 plt.ylabel('All Cause Mortality')
 plt.title('CMR Model')
 plt.show()
 
-cox.check_assumptions(survival_df, p_value_threshold=0.05)
+cox.check_assumptions(survival_dff, p_value_threshold=0.05)
 cox.plot()
 plt.show()
 
 # calculating hazard ratio models for VT/VF
 survival_df['VT_VF'] = survival_df[['Ventricular_tachycardia_(disorder)','Ventricular_fibrillation_(disorder)']].apply(lambda x: '{}'.format(np.max(x)), axis=1)
-cox.fit(df=survival_df, duration_col='duration', event_col='VT_VF', formula= 'Age + Gender + Essential_hypertension + Dyslipidaemia + Diabetes_mellitus + Cerebrovascular_accident + Heart_failure + Chronic_kidney_disease + Smoking_history')
+cox.fit(df=survival_df, duration_col='duration', event_col='VT_VF', formula= 'Age + Gender + HTN + Dyslipidaemia + DM + CVA + HF + CKD + Smoking')
 print(cox.summary)
 cox.baseline_hazard_.plot()
 plt.xlabel('Time (Days)')
@@ -192,7 +204,6 @@ cox.check_assumptions(survival_df, p_value_threshold=0.05)
 cox.plot()
 plt.title('Clinical Hazard Model for Ventricular Arrhythmia')
 plt.show()
-
 
 # Weibull model analysis for continuous variables
 aft = WeibullAFTFitter()
@@ -212,4 +223,3 @@ plt.xlabel('Time (Days)')
 plt.ylabel('Survival')
 plt.title('RVEF Model')
 plt.show()
-
