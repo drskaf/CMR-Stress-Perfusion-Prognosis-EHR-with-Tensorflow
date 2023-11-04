@@ -4,3 +4,15 @@ This is an example of electronic health records (EHR) modelling for outcome pred
 The sample codes are not exclusive, but they give some starting points to explore EHR data using machine learning. 
 
 The prediction variables are a mixture of clinical and cardiac magnetic resonance (CMR) reports data. 
+
+## Files
+
+file_build.py will curate dataframes and organise relevant variable culumns. 
+
+eda.py has conventional statistics to explore the data 
+
+survival.py performs all conventional statistics for survival analysis
+
+clinical_survmodel_compare.py will fit different machine learning models and compare their performance using AUC and F1 score
+
+
