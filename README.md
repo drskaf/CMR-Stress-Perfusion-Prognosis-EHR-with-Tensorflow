@@ -7,12 +7,12 @@ The prediction variables are a mixture of clinical and cardiac magnetic resonanc
 
 ## Files
 
-file_build.py will curate dataframes and organise relevant variable culumns. 
+file_build.py: will curate dataframes and organise relevant variable culumns. 
 
-eda.py has conventional statistics to explore the data 
+eda.py: uses conventional statistics to explore the data 
 
-survival.py performs all conventional statistics for survival analysis
+survival.py: performs all conventional statistics for survival analysis
 
-clinical_survmodel_compare.py will fit different machine learning models and compare their performance using AUC and F1 score
+clinical_survmodel_compare.py: will fit different machine learning models and compare their performance using AUC and F1 score
 
 
