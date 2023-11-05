@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 import tensorflow_probability as tfp
-from sklearn.svm import SVC
+from sklearn.svm import SVC    
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score, GridSearchCV
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
