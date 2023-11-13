@@ -1,23 +1,21 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 import os
 import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-import tensorflow_probability as tfp
-from sklearn.svm import SVC    
+from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import cross_val_score, GridSearchCV
+from sklearn.model_selection import cross_val_score, GridSearchCV, KFold
+from sklearn.metrics import RocCurveDisplay, auc, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from xgboost import XGBClassifier
-from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, roc_curve, classification_report
+from sklearn.metrics import roc_auc_score, accuracy_score, f1_score, roc_curve, classification_report, precision_score, recall_score
 import matplotlib.pyplot as plt
 import pandas as pd
-from utils import patient_dataset_splitter_compare, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
+from utils import patient_dataset_splitter, simple_patient_dataset_splitter, build_vocab_files, show_group_stats_viz, aggregate_dataset, preprocess_df, df_to_dataset, posterior_mean_field, prior_trainable
 from plot_metric.functions import BinaryClassification
-import pickle
-from keras.models import model_from_json, load_model
 import scipy.stats
-from sklearn.preprocessing import LabelBinarizer
+from scipy import interp
+
 
 pd.set_option('display.max_columns', 500)
 
@@ -35,7 +33,9 @@ survival_df['LVEF'] = survival_df['LVEF_(%)']
 
 # Define columns
 categorical_col_list = ['Chronic_kidney_disease','Hypertension', 'Gender', 'Heart_failure', 'Smoking', 'Positive_LGE', 'Positive_perf']
+categorical_col_list_clinical = ['Chronic_kidney_disease','Hypertension', 'Gender', 'Heart_failure', 'Smoking']
 numerical_col_list= ['Age', 'LVEF']
+ID = ['patient_TrustNumber']
 PREDICTOR_FIELD = 'Event'
 
 for v in survival_df['Age'].values:
@@ -50,19 +50,27 @@ for x in survival_df['LVEF'].values:
 
 def select_model_features(df, categorical_col_list, numerical_col_list, PREDICTOR_FIELD, grouping_key='patient_TrustNumber'):
     selected_col_list = [grouping_key] + [PREDICTOR_FIELD] + categorical_col_list + numerical_col_list
-    return survival_df[selected_col_list]
+    return df[selected_col_list]
 
 selected_features_df = select_model_features(survival_df, categorical_col_list, numerical_col_list,
                                              PREDICTOR_FIELD)
+x = survival_df.loc[:, categorical_col_list + numerical_col_list]
+y = survival_df.loc[:, PREDICTOR_FIELD]
 
 # Split data
-d_train, d_test = patient_dataset_splitter_compare(selected_features_df, 'patient_TrustNumber')
+d_train, d_vale, d_test = patient_dataset_splitter(selected_features_df, 'patient_TrustNumber')
 d_train = d_train.drop(columns=['patient_TrustNumber'])
+#d_val = d_val.drop(columns=['patient_TrustNumber'])
 d_test = d_test.drop(columns=['patient_TrustNumber'])
 
 x_train = d_train[categorical_col_list + numerical_col_list]
+x_train_cli = d_train[categorical_col_list_clinical + numerical_col_list]
 y_train = d_train[PREDICTOR_FIELD]
+#x_val = d_val[categorical_col_list + numerical_col_list]
+#x_val_cli = d_val[categorical_col_list_clinical + numerical_col_list]
+#y_val = d_val[PREDICTOR_FIELD]
 x_test = d_test[categorical_col_list + numerical_col_list]
+x_test_cli = d_test[categorical_col_list_clinical + numerical_col_list]
 y_test = d_test[PREDICTOR_FIELD]
 
 # fit SVM model
@@ -71,10 +79,74 @@ svc_model = SVC(class_weight='balanced', probability=True)
 svc_model.fit(x_train, y_train)
 svc_predict = svc_model.predict(x_test)
 svc_preds = svc_model.predict_proba(x_test)[:,1]
+cm = confusion_matrix(y_test, svc_predict, labels=svc_model.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=svc_model.classes_)
+disp.plot()
+plt.show()
 
-print('SVM ROCAUC score:',roc_auc_score(y_test, svc_predict))
+svc_model_cli = SVC(class_weight='balanced', probability=True)
+
+svc_model_cli.fit(x_train_cli, y_train)
+svc_predict_cli = svc_model_cli.predict(x_test_cli)
+svc_preds_cli = svc_model_cli.predict_proba(x_test_cli)[:,1]
+n_splits = 6
+
+kf =StratifiedKFold(n_splits=n_splits - 1, shuffle=True, random_state=42)
+
+svc_score = cross_val_score(svc_model_cli, x_train, y_train, cv=kf)
+print(np.average(svc_score))
+
+print('SVM ROCAUC score:',roc_auc_score(y_test, svc_preds))
 print('SVM Accuracy score:',accuracy_score(y_test, svc_predict))
 print('SVM F1 score:',f1_score(y_test, svc_predict))
+print('Precision:', precision_score(y_test, svc_predict))
+print('Recall:', recall_score(y_test, svc_predict))
+
+# K fold experiment
+
+tprs = []
+aucs = []
+mean_fpr = np.linspace(0, 1, 100)
+fig, ax = plt.subplots(figsize=(6, 6))
+i = 1
+for train, test in kf.split(x, y):
+    prediction = svc_model.fit(x.iloc[train], y.iloc[train]).predict_proba(x.iloc[test])
+    fpr, tpr, t = roc_curve(y[test], prediction[:, 1])
+    tprs.append(interp(mean_fpr, fpr, tpr))
+    roc_auc = auc(fpr, tpr)
+    aucs.append(roc_auc)
+    plt.plot(fpr, tpr, lw=2, alpha=0.3, label='ROC fold %d (AUC = %0.2f)' % (i, roc_auc))
+    i = i + 1
+
+plt.plot([0, 1], [0, 1], linestyle='--', lw=2, color='black')
+mean_tpr = np.mean(tprs, axis=0)
+mean_auc = auc(mean_fpr, mean_tpr)
+plt.plot(mean_fpr, mean_tpr, color='blue',
+         label=r'Mean ROC (AUC = %0.2f )' % (mean_auc), lw=2, alpha=1)
+
+mean_tpr = np.mean(tprs, axis=0)
+mean_tpr[-1] = 1.0
+std_tpr = np.std(tprs, axis=0)
+tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+
+ax.fill_between(
+    mean_fpr,
+    tprs_lower,
+    tprs_upper,
+    color="grey",
+    alpha=0.2,
+    label=r"$\pm$ 1 std. dev.",
+)
+
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('ROC')
+plt.legend(loc="lower right")
+plt.text(0.32, 0.7, 'More accurate area', fontsize=12)
+plt.text(0.63, 0.4, 'Less accurate area', fontsize=12)
+plt.show()
+
 
 # build linear regression model
 lr = LogisticRegression()
@@ -83,12 +155,28 @@ lr.fit(x_train, y_train)
 lr_predict = lr.predict(x_test)
 lr_preds = lr.predict_proba(x_test)[:,1]
 
-print('LR ROCAUC score:',roc_auc_score(y_test, lr_predict))
+cm = confusion_matrix(y_test, lr_predict, labels=lr.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=lr.classes_)
+disp.plot()
+plt.show()
+
+lr_cli = LogisticRegression()
+lr_cli.fit(x_train_cli, y_train)
+
+lr_predict_cli = lr_cli.predict(x_test_cli)
+lr_preds_cli = lr_cli.predict_proba(x_test_cli)[:,1]
+
+lr_score = cross_val_score(lr_cli, x_train, y_train, cv=kf)
+print(np.average(lr_score))
+
+print('LR ROCAUC score:',roc_auc_score(y_test, lr_preds))
 print('LR Accuracy score:',accuracy_score(y_test, lr_predict))
 print('LR F1 score:',f1_score(y_test, lr_predict))
+print('Precision:', precision_score(y_test, lr_predict))
+print('Recall:', recall_score(y_test, lr_predict))
 
-fpr, tpr, _ = roc_curve(y_test, lr_preds)
-auc = round(roc_auc_score(y_test, lr_preds), 2)
+fpr, tpr, _ = roc_curve(y_test, lr_preds_cli)
+auc = round(roc_auc_score(y_test, lr_preds_cli), 2)
 plt.plot(fpr, tpr, label="Linear Model, AUC="+str(auc))
 plt.legend()
 plt.xlabel('1 - Specificity')
@@ -102,86 +190,118 @@ rfc.fit(x_train, y_train)
 rfc_predict = rfc.predict(x_test)
 rfc_preds = rfc.predict_proba(x_test)[:,1]
 
-print('RF ROCAUC score:',roc_auc_score(y_test, rfc_predict))
+cm = confusion_matrix(y_test, rfc_predict, labels=rfc.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=rfc.classes_)
+disp.plot()
+plt.show()
+
+rfc_cli = RandomForestClassifier()
+
+rfc_cli.fit(x_train_cli, y_train)
+rfc_predict_cli = rfc_cli.predict(x_test_cli)
+rfc_preds_cli = rfc_cli.predict_proba(x_test_cli)[:,1]
+
+rfc_score = cross_val_score(rfc_cli, x_train, y_train, cv=kf)
+print(np.average(rfc_score))
+
+print('RF ROCAUC score:',roc_auc_score(y_test, rfc_preds))
 print('RF Accuracy score:',accuracy_score(y_test, rfc_predict))
 print('RF F1 score:',f1_score(y_test, rfc_predict))
+print('Precision:', precision_score(y_test, rfc_predict))
+print('Recall:', recall_score(y_test, rfc_predict))
 
 # test neural network model
 
 # Load and preprocess test data
-test_data = d_test
+#test_data = d_test
 
-processed_df = preprocess_df(test_data, categorical_col_list,
-        numerical_col_list, PREDICTOR_FIELD, categorical_impute_value='nan', numerical_impute_value=0)
+#processed_df = preprocess_df(test_data, categorical_col_list,
+ #       numerical_col_list, PREDICTOR_FIELD, categorical_impute_value='nan', numerical_impute_value=0)
 
-for v in processed_df['Age'].values:
-    mean = processed_df['Age'].describe()['mean']
-    std = processed_df['Age'].describe()['std']
-    v = v - mean / std
+#for v in processed_df['Age'].values:
+ #   mean = processed_df['Age'].describe()['mean']
+  #  std = processed_df['Age'].describe()['std']
+   # v = v - mean / std
 
-for x in processed_df['LVEF'].values:
-    mean = processed_df['LVEF'].describe()['mean']
-    std = processed_df['LVEF'].describe()['std']
-    x = x - mean / std
+#for x in processed_df['LVEF'].values:
+ #   mean = processed_df['LVEF'].describe()['mean']
+  #  std = processed_df['LVEF'].describe()['std']
+   # x = x - mean / std
 
 # Convert dataset from Pandas dataframes to TF dataset
-batch_size = 1
-survival_test_ds = df_to_dataset(processed_df, PREDICTOR_FIELD, batch_size=batch_size)
+#batch_size = 1
+#survival_test_ds = df_to_dataset(processed_df, PREDICTOR_FIELD, batch_size=batch_size)
 
 # Create categorical features
-vocab_file_list = build_vocab_files(test_data, categorical_col_list)
-from student_utils import create_tf_categorical_feature_cols
-tf_cat_col_list = create_tf_categorical_feature_cols(categorical_col_list)
+#vocab_file_list = build_vocab_files(test_data, categorical_col_list)
+#from student_utils import create_tf_categorical_feature_cols
+#tf_cat_col_list = create_tf_categorical_feature_cols(categorical_col_list)
 
 # create numerical features
-def create_tf_numerical_feature_cols(numerical_col_list, test_df):
-    tf_numeric_col_list = []
-    for c in numerical_col_list:
-        tf_numeric_feature = tf.feature_column.numeric_column(c)
-        tf_numeric_col_list.append(tf_numeric_feature)
-    return tf_numeric_col_list
+#def create_tf_numerical_feature_cols(numerical_col_list, test_df):
+ #   tf_numeric_col_list = []
+  #  for c in numerical_col_list:
+   #     tf_numeric_feature = tf.feature_column.numeric_column(c)
+    #    tf_numeric_col_list.append(tf_numeric_feature)
+    #return tf_numeric_col_list
 
-tf_cont_col_list = create_tf_numerical_feature_cols(numerical_col_list, test_data)
+#tf_cont_col_list = create_tf_numerical_feature_cols(numerical_col_list, test_data)
 
 # Create feature layer
-claim_feature_columns = tf_cat_col_list + tf_cont_col_list
-claim_feature_layer = tf.keras.layers.DenseFeatures(claim_feature_columns)
+#claim_feature_columns = tf_cat_col_list + tf_cont_col_list
+#claim_feature_layer = tf.keras.layers.DenseFeatures(claim_feature_columns)
 
-with open('fcn1.pkl', 'rb') as pickle_file:
-    content = pickle.load(pickle_file)
-survival_model = pickle.load(open('fcn1.pkl', 'rb'))
+#with open('fcn1.pkl', 'rb') as pickle_file:
+ #   content = pickle.load(pickle_file)
+#survival_model = pickle.load(open('fcn1.pkl', 'rb'))
 
 # Predict with model
-preds = survival_model.predict(survival_test_ds)
-pred_test_cl = []
-for p in preds:
-    pred = np.argmax(p)
-    pred_test_cl.append(pred)
-print(pred_test_cl[:5])
-survival_yhat = list(test_data['Event'].values)
-print(survival_yhat[:5])
+#preds = survival_model.predict(survival_test_ds)
+#pred_test_cl = []
+#for p in preds:
+ #   pred = np.argmax(p)
+  #  pred_test_cl.append(pred)
+#print(pred_test_cl[:5])
+#survival_yhat = list(test_data['Event'].values)
+#print(survival_yhat[:5])
 
-prob_outputs = {
-    "pred": pred_test_cl,
-    "actual_value": survival_yhat
-}
-prob_output_df = pd.DataFrame(prob_outputs)
-print(prob_output_df.head())
+#prob_outputs = {
+ #   "pred": pred_test_cl,
+  #  "actual_value": survival_yhat
+#}
+#prob_output_df = pd.DataFrame(prob_outputs)
+#print(prob_output_df.head())
 
 # Evaluate model
-print(classification_report(survival_yhat, pred_test_cl))
-print('Clinical FCN ROCAUC score:',roc_auc_score(survival_yhat, pred_test_cl))
-print('Clinical FCN Accuracy score:',accuracy_score(survival_yhat, pred_test_cl))
-print('Clinical FCN F1 score:',f1_score(survival_yhat, pred_test_cl))
+#print(classification_report(survival_yhat, pred_test_cl))
+#print('Clinical FCN ROCAUC score:',roc_auc_score(survival_yhat, pred_test_cl))
+#print('Clinical FCN Accuracy score:',accuracy_score(survival_yhat, pred_test_cl))
+#print('Clinical FCN F1 score:',f1_score(survival_yhat, pred_test_cl))
 
 # build XGBoost Classifier model
 xgb_model = XGBClassifier(tree_method="hist",enable_categorical=True).fit(x_train, y_train)
 
 xgb_predict = xgb_model.predict(x_test)
 xgb_preds = xgb_model.predict_proba(x_test)[:,1]
-print('XGB ROCAUC score:',roc_auc_score(y_test, xgb_predict))
+
+cm = confusion_matrix(y_test, xgb_predict, labels=xgb_model.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=xgb_model.classes_)
+disp.plot()
+plt.show()
+
+xgb_model_cli = XGBClassifier(tree_method="hist",enable_categorical=True).fit(x_train_cli, y_train)
+
+xgb_predict_cli = xgb_model_cli.predict(x_test_cli)
+xgb_preds_cli = xgb_model_cli.predict_proba(x_test_cli)[:,1]
+
+xgb_score = cross_val_score(xgb_model_cli, x_train, y_train, cv=kf)
+print(np.average(xgb_score))
+
+print('XGB ROCAUC score:',roc_auc_score(y_test, xgb_preds))
 print('XGB Accuracy score:',accuracy_score(y_test, xgb_predict))
 print('XGB F1 score:',f1_score(y_test, xgb_predict))
+print('Precision:', precision_score(y_test, xgb_predict))
+print('Recall:', recall_score(y_test, xgb_predict))
 
 # build ensemble method
 comb_model = VotingClassifier(estimators=[('XBG',xgb_model), ('LR',lr), ('RF',rfc), ('SVC',svc_model)], voting='soft')
@@ -189,12 +309,27 @@ comb_model.fit(x_train, y_train)
 comb_model_pred = comb_model.predict(x_test)
 comb_preds = comb_model.predict_proba(x_test)[:,1]
 
-print('Ensemble Model ROCAUC score:',roc_auc_score(y_test, comb_model_pred))
+cm = confusion_matrix(y_test, comb_model_pred, labels=comb_model.classes_)
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=comb_model.classes_)
+disp.plot()
+plt.show()
+
+comb_model_cli = VotingClassifier(estimators=[('XBG',xgb_model_cli), ('LR',lr_cli), ('RF',rfc_cli), ('SVC',svc_model_cli)], voting='soft')
+comb_model_cli.fit(x_train_cli, y_train)
+comb_model_pred_cli = comb_model_cli.predict(x_test_cli)
+comb_preds_cli = comb_model_cli.predict_proba(x_test_cli)[:,1]
+
+comb_score = cross_val_score(comb_model_cli, x_train, y_train, cv=kf)
+print(np.average(comb_score))
+
+print('Ensemble Model ROCAUC score:',roc_auc_score(y_test, comb_preds))
 print('Ensemble Model Accuracy score:',accuracy_score(y_test, comb_model_pred))
 print('Ensemble Model F1 score:',f1_score(y_test, comb_model_pred))
+print('Precision:', precision_score(y_test, comb_model_pred))
+print('Recall:', recall_score(y_test, comb_model_pred))
 
-fpr, tpr, _ = roc_curve(y_test, comb_preds)
-auc = round(roc_auc_score(y_test, comb_preds), 2)
+fpr, tpr, _ = roc_curve(y_test, comb_preds_cli)
+auc = round(roc_auc_score(y_test, comb_preds_cli), 2)
 plt.plot(fpr, tpr, label="Non-Linear Model, AUC="+str(auc))
 plt.legend()
 plt.xlabel('1 - Specificity')
@@ -205,19 +340,19 @@ plt.show()
 
 fpr, tpr, _ = roc_curve(y_test, lr_preds)
 auc = round(roc_auc_score(y_test, lr_preds), 2)
-plt.plot(fpr, tpr, label="Multivariate Regression, AUC="+str(auc))
+plt.plot(fpr, tpr, label="XGBoost Classifier, AUC="+str(auc))
 fpr, tpr, _ = roc_curve(y_test, rfc_preds)
 auc = round(roc_auc_score(y_test, rfc_preds), 2)
 plt.plot(fpr, tpr, label="Random Forest, AUC="+str(auc))
 fpr, tpr, _ = roc_curve(y_test, xgb_preds)
 auc = round(roc_auc_score(y_test, xgb_preds), 2)
-plt.plot(fpr, tpr, label="XGBoost Classifier, AUC="+str(auc))
+plt.plot(fpr, tpr, label="Multivariate Regression, AUC="+str(auc))
 fpr, tpr, _ = roc_curve(y_test, svc_preds)
 auc = round(roc_auc_score(y_test, svc_preds), 2)
 plt.plot(fpr,tpr,label="SVM, AUC="+str(auc))
-fpr, tpr, _ = roc_curve(survival_yhat, preds[:,1])
-auc = round(roc_auc_score(survival_yhat, preds[:,1]), 2)
-plt.plot(fpr, tpr, label="Fully Connected Network, AUC="+str(auc))
+#fpr, tpr, _ = roc_curve(survival_yhat, preds[:,1])
+#auc = round(roc_auc_score(survival_yhat, preds[:,1]), 2)
+#plt.plot(fpr, tpr, label="Fully Connected Network, AUC="+str(auc))
 fpr, tpr, _ = roc_curve(y_test, comb_preds)
 auc = round(roc_auc_score(y_test, comb_preds), 2)
 plt.plot(fpr, tpr, label="Ensemble Classifier, AUC="+str(auc))
@@ -351,5 +486,6 @@ def delong_roc_test(ground_truth, predictions_one, predictions_two):
     aucs, delongcov = fastDeLong(predictions_sorted_transposed, label_1_count)
     return calc_pvalue(aucs, delongcov)
 
-print('DeLong test for non-linear and linear predictions:', delong_roc_test(y_test, svc_predict, lr_predict))
+print('DeLong test for non-linear and linear predictions:', delong_roc_test(y_test, comb_model_pred, comb_model_pred_cli))
+
 
