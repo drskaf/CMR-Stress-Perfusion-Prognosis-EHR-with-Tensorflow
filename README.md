@@ -13,6 +13,6 @@ eda.py: uses conventional statistics to explore the data
 
 survival.py: performs all conventional statistics for survival analysis
 
-clinical_survmodel_compare.py: will fit different machine learning models and compare their performance using AUC and F1 score
+survmodel_compare.py: will fit different machine learning models and compare their performance using AUC, precision, recall, accuracy and F1 score
 
 
